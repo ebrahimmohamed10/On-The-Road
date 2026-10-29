@@ -4,9 +4,9 @@ class AppConstants {
   static const String appName = 'On the Road';
   static const String appNameAr = 'على الطريق';
 
-  // Supabase — أضف بياناتك هنا
-  static const String supabaseUrl = 'YOUR_SUPABASE_URL';
-  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+  // Supabase Credentials
+  static const String supabaseUrl = 'https://chwbyhqcmxedhfezdmfi.supabase.co';
+  static const String supabaseAnonKey = 'sb_publishable_CndQvhb0TbeinhKYbvNNpQ_Ewbp1-55';
 
   // Verification statuses
   static const String verifUnverified = 'unverified';
@@ -34,4 +34,3 @@ class AppConstants {
   static const String roleDriver = 'driver';
   static const String roleAdmin = 'admin';
 }
-
