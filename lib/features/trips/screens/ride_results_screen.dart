@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
+import '../services/trip_service.dart';
 
 class RideResultsScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? searchParams;
@@ -14,18 +15,18 @@ class RideResultsScreen extends ConsumerStatefulWidget {
 
 class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
   int _selectedFilter = 0;
+  List<Map<String, dynamic>> _liveTrips = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _dummyTrips = [
+  final List<Map<String, dynamic>> _fallbackTrips = [
     {
       'id': 'trip-1',
       'driverName': 'محمود السيد',
       'driverRating': 4.9,
       'tripsCount': 142,
       'carModel': 'تويوتا كورولا 2022',
-      'carColor': 'أبيض',
       'departureTime': '08:00 ص',
       'arrivalTime': '10:30 ص',
-      'duration': 'ساعتان و30 دقيقة',
       'availableSeats': 3,
       'price': 120,
       'waypoints': ['القاهرة', 'طنطا', 'الإسكندرية'],
@@ -36,29 +37,57 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
       'driverRating': 4.8,
       'tripsCount': 89,
       'carModel': 'هيونداي إلنترا 2023',
-      'carColor': 'رمادي',
       'departureTime': '09:30 ص',
       'arrivalTime': '12:00 م',
-      'duration': 'ساعتان و30 دقيقة',
       'availableSeats': 1,
       'price': 110,
       'waypoints': ['القاهرة', 'بنها', 'دمنهور', 'الإسكندرية'],
     },
-    {
-      'id': 'trip-3',
-      'driverName': 'محمد عادل',
-      'driverRating': 5.0,
-      'tripsCount': 210,
-      'carModel': 'كيا سيراتو 2021',
-      'carColor': 'أسود',
-      'departureTime': '11:00 ص',
-      'arrivalTime': '01:15 م',
-      'duration': 'ساعتان و15 دقيقة',
-      'availableSeats': 2,
-      'price': 130,
-      'waypoints': ['القاهرة', 'طنطا', 'الإسكندرية'],
-    },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLiveTrips();
+  }
+
+  Future<void> _fetchLiveTrips() async {
+    final fromCity = widget.searchParams?['from'] as String?;
+    final toCity = widget.searchParams?['to'] as String?;
+
+    final service = ref.read(tripServiceProvider);
+    final results = await service.getTrips(fromCity: fromCity, toCity: toCity);
+
+    if (mounted) {
+      setState(() {
+        if (results.isNotEmpty) {
+          _liveTrips = results.map((t) {
+            final driver = t['driver'] as Map<String, dynamic>?;
+            final segments = (t['segments'] as List?) ?? [];
+            final price = segments.isNotEmpty
+                ? (segments.last['price'] as num).toInt()
+                : 120;
+
+            return {
+              'id': t['id'].toString(),
+              'driverName': driver?['name'] ?? 'سائق على الطريق',
+              'driverRating': (driver?['rating'] as num?)?.toDouble() ?? 5.0,
+              'tripsCount': driver?['trips_count'] ?? 10,
+              'carModel': driver?['car_model'] ?? 'سيارة خاصة',
+              'departureTime': '08:00 ص',
+              'arrivalTime': '10:30 ص',
+              'availableSeats': t['total_seats'] ?? 3,
+              'price': price,
+              'waypoints': [t['origin_city'], ...segments.map((s) => s['to_city'])],
+            };
+          }).toList();
+        } else {
+          _liveTrips = _fallbackTrips;
+        }
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +114,7 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
       ),
       body: Column(
         children: [
-          // فلاتر الترتيب (الأسرع، الأرخص، الأعلى تقييماً)
+          // فلاتر الترتيب
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -102,16 +131,24 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
 
           const SizedBox(height: 8),
 
-          // قائمة الرحلات المتاحة
+          // قائمة الرحلات
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: _dummyTrips.length,
-              itemBuilder: (context, index) {
-                final trip = _dummyTrips[index];
-                return _buildTripCard(trip, theme);
-              },
-            ),
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFF59E0B)),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _fetchLiveTrips,
+                    color: const Color(0xFFF59E0B),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: _liveTrips.length,
+                      itemBuilder: (context, index) {
+                        final trip = _liveTrips[index];
+                        return _buildTripCard(trip, theme);
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -165,7 +202,6 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // معلومات التوقيت والسعر
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -215,10 +251,7 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 8),
-
-              // المسار ونقاط التوقف
               Row(
                 children: [
                   const Icon(Icons.route_rounded, size: 16, color: Color(0xFFF59E0B)),
@@ -235,13 +268,10 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                   ),
                 ],
               ),
-
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Divider(height: 1),
               ),
-
-              // بيانات السائق والسيارة والمقاعد المتاحة
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -290,8 +320,6 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                       ),
                     ],
                   ),
-
-                  // شارة المقاعد المتبقية
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -326,4 +354,3 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
     );
   }
 }
-

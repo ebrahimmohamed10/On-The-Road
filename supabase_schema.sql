@@ -124,3 +124,4 @@ CREATE POLICY "Users can create bookings" ON public.bookings FOR INSERT WITH CHE
 CREATE POLICY "Drivers can view trip bookings" ON public.bookings FOR SELECT USING (
   auth.uid() IN (SELECT driver_id FROM public.trips WHERE id = trip_id)
 );
+

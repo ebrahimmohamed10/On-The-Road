@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
+import '../../trips/services/trip_service.dart';
 
 class SeatBookingScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? bookingData;
@@ -30,16 +31,27 @@ class _SeatBookingScreenState extends ConsumerState<SeatBookingScreen> {
     });
   }
 
-  void _confirmBooking() {
+  Future<void> _confirmBooking() async {
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      context.go('/passenger/booking-summary', extra: {
-        'seatsCount': _selectedSeats.length,
-        'driverName': widget.bookingData?['driverName'] ?? 'محمود السيد',
-        'totalPrice': (_selectedSeats.length * (widget.bookingData?['price'] ?? 120)),
-      });
+    final tripId = widget.bookingData?['tripId'] ?? 'trip-1';
+    final totalPrice = (_selectedSeats.length * (widget.bookingData?['price'] ?? 120)).toDouble();
+
+    // استدعاء خدمة الحجز الحقيقية في Supabase
+    final service = ref.read(tripServiceProvider);
+    await service.createBooking(
+      tripId: tripId,
+      pickupCity: 'القاهرة',
+      dropoffCity: 'الإسكندرية',
+      seatsBooked: _selectedSeats.length,
+      totalPrice: totalPrice,
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    context.go('/passenger/booking-summary', extra: {
+      'seatsCount': _selectedSeats.length,
+      'driverName': widget.bookingData?['driverName'] ?? 'محمود السيد',
+      'totalPrice': totalPrice.toInt(),
     });
   }
 
