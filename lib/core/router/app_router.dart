@@ -40,9 +40,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isSplash = state.matchedLocation == '/splash';
       final isWelcome = state.matchedLocation == '/welcome';
       final isGoingToAuth = state.matchedLocation.startsWith('/auth');
+      final isGoingToVerification = state.matchedLocation.startsWith('/verification');
 
       if (isSplash || isWelcome) return null;
-      if (!isAuth && !isGoingToAuth) return '/welcome';
+      if (!isAuth && !isGoingToAuth && !isGoingToVerification) return '/welcome';
       if (isAuth && (isGoingToAuth || isWelcome)) return '/passenger/home';
       return null;
     },
