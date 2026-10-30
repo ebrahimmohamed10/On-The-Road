@@ -385,3 +385,4 @@ class _RateTripScreenState extends ConsumerState<RateTripScreen> {
     );
   }
 }
+
