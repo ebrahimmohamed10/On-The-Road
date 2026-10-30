@@ -249,6 +249,14 @@ class AppStrings {
   static String navAccount(BuildContext context) =>
       tr(context, ar: 'حسابي', en: 'Account');
 
+  // Booking Summary helpers
+  static String bookingSuccess(BuildContext context) =>
+      tr(context, ar: 'تم إرسال طلب الحجز بنجاح!', en: 'Booking request sent successfully!');
+  static String bookingSuccessSub(BuildContext context) =>
+      tr(context, ar: 'تم إخطار السائق بطلبك وستتلقى إشعاراً فور قبوله.', en: 'The driver has been notified and you will receive an update once confirmed.');
+  static String bookingCode(BuildContext context) =>
+      tr(context, ar: 'رمز الحجز', en: 'Booking Reference');
+
   // Screen: My Trips
   static String myTrips(BuildContext context) =>
       tr(context, ar: 'رحلاتي وحجوزاتي', en: 'My rides & bookings');

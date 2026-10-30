@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
-import '../../trips/services/trip_service.dart';
 
 class SeatBookingScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? bookingData;
@@ -16,7 +15,6 @@ class SeatBookingScreen extends ConsumerStatefulWidget {
 class _SeatBookingScreenState extends ConsumerState<SeatBookingScreen> {
   final Set<int> _selectedSeats = {1};
   final Set<int> _occupiedSeats = {3}; // مقعد محجوز مسبقاً
-  bool _isLoading = false;
 
   void _toggleSeat(int seatNumber) {
     if (_occupiedSeats.contains(seatNumber)) return;
