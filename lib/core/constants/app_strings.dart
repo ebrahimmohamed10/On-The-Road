@@ -318,4 +318,49 @@ class AppStrings {
       tr(context, ar: 'القاهرة', en: 'Cairo');
   static String alexCity(BuildContext context) =>
       tr(context, ar: 'الإسكندرية', en: 'Alexandria');
+
+  // ==========================================================
+  // Screen 17: Rate Trip / تقييم الرحلة
+  // (matching Figma ar-rate-trip & en-rate-trip)
+  // ==========================================================
+  static String rateYourTrip(BuildContext context) =>
+      tr(context, ar: 'قيّم رحلتك', en: 'Rate your trip');
+  static String whatWentWell(BuildContext context) =>
+      tr(context, ar: 'إيه اللي عجبك؟', en: 'What went well?');
+  static String writeCommentHint(BuildContext context) =>
+      tr(context, ar: 'اكتب تعليقك (اختياري)', en: 'Write a comment (optional)');
+  static String submitRating(BuildContext context) =>
+      tr(context, ar: 'إرسال التقييم', en: 'Submit rating');
+  static String skipRating(BuildContext context) =>
+      tr(context, ar: 'تخطى', en: 'Skip');
+  static String ratingSubmitted(BuildContext context) =>
+      tr(context, ar: 'شكراً! تم إرسال تقييمك بنجاح.', en: 'Thank you! Your rating was submitted.');
+
+  // Star rating labels
+  static String ratingPoor(BuildContext context) =>
+      tr(context, ar: 'سيئة', en: 'Poor');
+  static String ratingFair(BuildContext context) =>
+      tr(context, ar: 'مقبولة', en: 'Fair');
+  static String ratingGood(BuildContext context) =>
+      tr(context, ar: 'جيدة', en: 'Good');
+  static String ratingExcellent(BuildContext context) =>
+      tr(context, ar: 'ممتازة', en: 'Excellent');
+  static String ratingPerfect(BuildContext context) =>
+      tr(context, ar: 'رائعة جداً', en: 'Perfect');
+
+  // Rating tags
+  static String tagSafeDriver(BuildContext context) =>
+      tr(context, ar: 'سواقة آمنة', en: 'Safe driving');
+  static String tagOnTime(BuildContext context) =>
+      tr(context, ar: 'في الميعاد', en: 'On time');
+  static String tagCleanCar(BuildContext context) =>
+      tr(context, ar: 'عربية نضيفة', en: 'Clean car');
+  static String tagFriendly(BuildContext context) =>
+      tr(context, ar: 'ودود', en: 'Friendly');
+  static String tagComfortableRoute(BuildContext context) =>
+      tr(context, ar: 'طريق مريح', en: 'Comfortable route');
+  static String tagPolite(BuildContext context) =>
+      tr(context, ar: 'تعامل محترم', en: 'Polite');
+  static String tagFunTrip(BuildContext context) =>
+      tr(context, ar: 'طريق مريح', en: 'Fun trip');
 }
