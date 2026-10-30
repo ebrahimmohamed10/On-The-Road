@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 import '../services/trip_service.dart';
@@ -24,7 +25,7 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
     _fetchLiveTrips();
   }
 
-Future<void> _fetchLiveTrips() async {
+  Future<void> _fetchLiveTrips() async {
     final fromCity = widget.searchParams?['from'] as String?;
     final toCity = widget.searchParams?['to'] as String?;
     final service = ref.read(tripServiceProvider);
@@ -34,15 +35,16 @@ Future<void> _fetchLiveTrips() async {
     setState(() {
       _liveTrips = results.map((trip) {
         final driver = trip['driver'] as Map<String, dynamic>?;
-        final segments = List<Map<String, dynamic>>.from(
-          ((trip['segments'] as List?) ?? []).map(
-            (segment) => Map<String, dynamic>.from(segment),
-          ),
-        )..sort(
-          (a, b) => (a['segment_order'] as num).compareTo(
-            b['segment_order'] as num,
-          ),
-        );
+        final segments =
+            List<Map<String, dynamic>>.from(
+              ((trip['segments'] as List?) ?? []).map(
+                (segment) => Map<String, dynamic>.from(segment),
+              ),
+            )..sort(
+              (a, b) => (a['segment_order'] as num).compareTo(
+                b['segment_order'] as num,
+              ),
+            );
         final legs = segments
             .where((segment) => segment['segment_kind'] == 'leg')
             .toList();
@@ -70,6 +72,7 @@ Future<void> _fetchLiveTrips() async {
       _isLoading = false;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -101,11 +104,20 @@ Future<void> _fetchLiveTrips() async {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                _buildFilterChip(0, AppStrings.tr(context, ar: 'الأعلى تقييماً', en: 'Top rated')),
+                _buildFilterChip(
+                  0,
+                  AppStrings.tr(context, ar: 'الأعلى تقييماً', en: 'Top rated'),
+                ),
                 const SizedBox(width: 8),
-                _buildFilterChip(1, AppStrings.tr(context, ar: 'الأرخص سعراً', en: 'Cheapest')),
+                _buildFilterChip(
+                  1,
+                  AppStrings.tr(context, ar: 'الأرخص سعراً', en: 'Cheapest'),
+                ),
                 const SizedBox(width: 8),
-                _buildFilterChip(2, AppStrings.tr(context, ar: 'الأبكر موعداً', en: 'Earliest')),
+                _buildFilterChip(
+                  2,
+                  AppStrings.tr(context, ar: 'الأبكر موعداً', en: 'Earliest'),
+                ),
               ],
             ),
           ),
@@ -119,12 +131,15 @@ Future<void> _fetchLiveTrips() async {
                     child: CircularProgressIndicator(color: Color(0xFFF59E0B)),
                   )
                 : _liveTrips.isEmpty
-                    ? const Center(child: Text('No trips were found.'))
-                    : RefreshIndicator(
+                ? const Center(child: Text('No trips were found.'))
+                : RefreshIndicator(
                     onRefresh: _fetchLiveTrips,
                     color: const Color(0xFFF59E0B),
                     child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       itemCount: _liveTrips.length,
                       itemBuilder: (context, index) {
                         final trip = _liveTrips[index];
@@ -150,9 +165,7 @@ Future<void> _fetchLiveTrips() async {
         fontWeight: FontWeight.bold,
         fontSize: 12,
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
@@ -164,9 +177,7 @@ Future<void> _fetchLiveTrips() async {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: theme.dividerColor.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -198,7 +209,11 @@ Future<void> _fetchLiveTrips() async {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_rounded, size: 16, color: theme.hintColor),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                        color: theme.hintColor,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         trip['arrivalTime'],
@@ -212,10 +227,17 @@ Future<void> _fetchLiveTrips() async {
                   const Text(
                     'Choose stops to see fare',
                     style: TextStyle(fontWeight: FontWeight.w700),
-                  ),              const SizedBox(height: 8),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.route_rounded, size: 16, color: Color(0xFFF59E0B)),
+                  const Icon(
+                    Icons.route_rounded,
+                    size: 16,
+                    color: Color(0xFFF59E0B),
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -242,7 +264,9 @@ Future<void> _fetchLiveTrips() async {
                         radius: 18,
                         backgroundColor: const Color(0xFF0F172A),
                         child: Text(
-                          trip['driverName'].toString().isEmpty ? '?' : trip['driverName'].toString().substring(0, 1),
+                          trip['driverName'].toString().isEmpty
+                              ? '?'
+                              : trip['driverName'].toString().substring(0, 1),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -256,11 +280,18 @@ Future<void> _fetchLiveTrips() async {
                         children: [
                           Text(
                             trip['driverName'],
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
                           Row(
                             children: [
-                              const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 14,
+                                color: Color(0xFFF59E0B),
+                              ),
                               const SizedBox(width: 2),
                               Text(
                                 '${trip['driverRating']}',
@@ -273,7 +304,10 @@ Future<void> _fetchLiveTrips() async {
                               const SizedBox(width: 6),
                               Text(
                                 '• ${trip['carModel']}',
-                                style: TextStyle(fontSize: 11, color: theme.hintColor),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.hintColor,
+                                ),
                               ),
                             ],
                           ),
@@ -282,7 +316,10 @@ Future<void> _fetchLiveTrips() async {
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF10B981).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
