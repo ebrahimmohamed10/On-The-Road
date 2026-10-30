@@ -8,6 +8,9 @@ class AppStrings {
     return isArabic ? ar : en;
   }
 
+  static bool isArabic(BuildContext context) =>
+      Localizations.localeOf(context).languageCode == 'ar';
+
   // General
   static String appName(BuildContext context) =>
       tr(context, ar: 'على الطريق', en: 'On the Road');
@@ -268,4 +271,51 @@ class AppStrings {
       tr(context, ar: 'مؤكد', en: 'Confirmed');
   static String completedStatus(BuildContext context) =>
       tr(context, ar: 'مكتملة', en: 'Completed');
+
+  // ==========================================================
+  // Screen 16: Booked Trip Details / تفاصيل الرحلة
+  // (matching Figma ar-trip-details & en-trip-details)
+  // ==========================================================
+  static String confirmedDot(BuildContext context) =>
+      tr(context, ar: '• مؤكدة', en: '• Confirmed');
+  static String tripDuration(BuildContext context) =>
+      tr(context, ar: '٢ س ٣٠ د', en: '2h 30m');
+  static String idVerified(BuildContext context) =>
+      tr(context, ar: 'هوية موثقة', en: 'ID verified');
+  static String validLicense(BuildContext context) =>
+      tr(context, ar: 'رخصة سارية', en: 'Valid license');
+  static String messageDriver(BuildContext context) =>
+      tr(context, ar: 'راسل السائق', en: 'Message driver');
+  static String callDriver(BuildContext context) =>
+      tr(context, ar: 'اتصال', en: 'Call');
+  static String yourSafety(BuildContext context) =>
+      tr(context, ar: 'أمانك', en: 'Your safety');
+  static String shareTripWithTrusted(BuildContext context) =>
+      tr(context, ar: 'شارك الرحلة مع شخص تثق فيه', en: 'Share trip with someone you trust');
+  static String emergencyButton(BuildContext context) =>
+      tr(context, ar: 'زر الطوارئ أثناء الرحلة', en: 'Emergency button during the trip');
+  static String paymentCashToDriver(BuildContext context) =>
+      tr(context, ar: 'الدفع: كاش للسائق', en: 'Payment: Cash to driver');
+  static String cancellationPolicy(BuildContext context) =>
+      tr(context, ar: 'سياسة الإلغاء', en: 'Cancellation policy');
+  static String cancelBooking(BuildContext context) =>
+      tr(context, ar: 'إلغاء الحجز', en: 'Cancel booking');
+  static String cancelBookingConfirm(BuildContext context) =>
+      tr(context, ar: 'هل أنت متأكد من رغبتك في إلغاء الحجز؟', en: 'Are you sure you want to cancel this booking?');
+  static String cancelBookingSub(BuildContext context) =>
+      tr(context, ar: 'يمكنك إلغاء الحجز مجاناً حتى ساعتين قبل موعد انطلاق الرحلة.', en: 'You can cancel free of charge up to 2 hours before trip departure.');
+  static String keepBooking(BuildContext context) =>
+      tr(context, ar: 'التراجع', en: 'Keep booking');
+  static String confirmCancel(BuildContext context) =>
+      tr(context, ar: 'نعم، إلغاء الحجز', en: 'Yes, cancel booking');
+  static String tripLinkCopied(BuildContext context) =>
+      tr(context, ar: 'تم نسخ رابط الرحلة للمشاركة', en: 'Trip link copied to clipboard');
+  static String defaultCarDetails(BuildContext context) =>
+      tr(context, ar: 'تويوتا كورولا • بيضاء • أ ب ج ١٢٣٤', en: 'Toyota Corolla • White • ABC 1234');
+  static String defaultDateHeader(BuildContext context) =>
+      tr(context, ar: 'الأربعاء، ٢٨ أكتوبر', en: 'Wed, 28 Oct');
+  static String cairoCity(BuildContext context) =>
+      tr(context, ar: 'القاهرة', en: 'Cairo');
+  static String alexCity(BuildContext context) =>
+      tr(context, ar: 'الإسكندرية', en: 'Alexandria');
 }

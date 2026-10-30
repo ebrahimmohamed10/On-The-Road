@@ -16,6 +16,7 @@ import '../../features/trips/screens/passenger_home_screen.dart';
 import '../../features/trips/screens/search_trips_screen.dart';
 import '../../features/trips/screens/ride_results_screen.dart';
 import '../../features/trips/screens/trip_details_screen.dart';
+import '../../features/trips/screens/booked_trip_details_screen.dart';
 import '../../features/bookings/screens/seat_booking_screen.dart';
 import '../../features/bookings/screens/payment_screen.dart';
 import '../../features/bookings/screens/booking_confirmation_screen.dart';
@@ -86,6 +87,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) {
           final params = state.extra as Map<String, dynamic>?;
           return RideResultsScreen(searchParams: params);
+        },
+      ),
+      GoRoute(
+        path: '/passenger/trip-details',
+        builder: (_, state) {
+          final data = state.extra as Map<String, dynamic>?;
+          return BookedTripDetailsScreen(tripData: data);
+        },
+      ),
+      GoRoute(
+        path: '/passenger/booked-trip/:id',
+        builder: (_, state) {
+          final data = state.extra as Map<String, dynamic>?;
+          return BookedTripDetailsScreen(tripData: data);
         },
       ),
       GoRoute(

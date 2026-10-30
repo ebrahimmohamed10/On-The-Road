@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
@@ -125,15 +126,28 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> with Single
   }) {
     final theme = Theme.of(context);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: theme.dividerColor.withValues(alpha: 0.15),
+    return InkWell(
+      onTap: () {
+        context.push('/passenger/trip-details', extra: {
+          'driverName': driver,
+          'driverInitials': driver.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join(),
+          'carModel': car,
+          'price': price,
+          'from': from,
+          'to': to,
+          'status': status,
+        });
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: theme.dividerColor.withValues(alpha: 0.15),
+          ),
         ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -192,6 +206,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> with Single
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
