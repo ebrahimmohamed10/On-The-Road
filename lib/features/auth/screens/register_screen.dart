@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
+import '../services/auth_service.dart';
+import '../services/egyptian_phone_number.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -24,17 +27,69 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
-  void _onContinue() {
+  Future<void> _onContinue() async {
     final name = _nameController.text.trim();
-    final phone = _phoneController.text.trim();
-    if (name.isEmpty || phone.isEmpty) return;
+    final phone = normalizeEgyptianPhoneNumber(_phoneController.text);
+    if (name.isEmpty) {
+      _showError(
+        AppStrings.tr(
+          context,
+          ar: 'أدخل الاسم الكامل.',
+          en: 'Enter your full name.',
+        ),
+      );
+      return;
+    }
+    if (phone == null) {
+      _showError(
+        AppStrings.tr(
+          context,
+          ar: 'أدخل رقم هاتف مصري صحيحًا مثل 01111915092.',
+          en: 'Enter a valid Egyptian mobile number, such as 01111915092.',
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
+    try {
+      final role = _selectedRoleIndex == 1 ? 'driver' : 'passenger';
+      await ref
+          .read(authServiceProvider)
+          .requestPhoneOtp(
+            phone: phone,
+            createUser: true,
+            fullName: name,
+            role: role,
+          );
       if (!mounted) return;
-      setState(() => _isLoading = false);
-      context.go('/auth/otp', extra: '+20 $phone');
-    });
+      context.go(
+        '/auth/otp',
+        extra: {
+          'phone': phone,
+          'registration': true,
+          'name': name,
+          'role': role,
+        },
+      );
+    } catch (_) {
+      if (mounted) {
+        _showError(
+          AppStrings.tr(
+            context,
+            ar: 'تعذر إرسال رمز التحقق. تحقق من الرقم وإعدادات Supabase ثم حاول مجددًا.',
+            en: 'Could not send the verification code. Check the phone number and Supabase setup, then try again.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -118,7 +173,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   color: _selectedRoleIndex == 0
                                       ? Colors.white
                                       : theme.textTheme.bodyMedium?.color,
-                                  fontFamily: theme.textTheme.bodyMedium?.fontFamily,
+                                  fontFamily:
+                                      theme.textTheme.bodyMedium?.fontFamily,
                                 ),
                               ),
                             ],
@@ -157,7 +213,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   color: _selectedRoleIndex == 1
                                       ? Colors.white
                                       : theme.textTheme.bodyMedium?.color,
-                                  fontFamily: theme.textTheme.bodyMedium?.fontFamily,
+                                  fontFamily:
+                                      theme.textTheme.bodyMedium?.fontFamily,
                                 ),
                               ),
                             ],
@@ -183,7 +240,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  hintText: AppStrings.tr(context, ar: 'أحمد محمد', en: 'Ahmed Mohamed'),
+                  hintText: AppStrings.tr(
+                    context,
+                    ar: 'أحمد محمد',
+                    en: 'Ahmed Mohamed',
+                  ),
                   prefixIcon: const Icon(Icons.person_outline_rounded),
                 ),
               ),
@@ -209,7 +270,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
                         borderRadius: const BorderRadiusDirectional.horizontal(
@@ -245,7 +309,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
                           filled: false,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                          ),
                         ),
                       ),
                     ),

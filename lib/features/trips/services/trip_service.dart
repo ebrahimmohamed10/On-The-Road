@@ -5,13 +5,17 @@ final tripServiceProvider = Provider<TripService>((ref) {
   return TripService(Supabase.instance.client);
 });
 
-final availableTripsProvider = FutureProvider.family<List<Map<String, dynamic>>, Map<String, dynamic>>((ref, filters) async {
-  final service = ref.watch(tripServiceProvider);
-  return service.getTrips(
-    fromCity: filters['from'] as String?,
-    toCity: filters['to'] as String?,
-  );
-});
+final availableTripsProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, Map<String, dynamic>>((
+      ref,
+      filters,
+    ) async {
+      final service = ref.watch(tripServiceProvider);
+      return service.getTrips(
+        fromCity: filters['from'] as String?,
+        toCity: filters['to'] as String?,
+      );
+    });
 
 class TripService {
   final SupabaseClient _client;
@@ -23,13 +27,10 @@ class TripService {
     String? toCity,
   }) async {
     try {
-      var query = _client.from('trips').select('''
-        *,
-        driver:profiles!driver_id (
-          id, name, avatar_url, rating, trips_count, car_model, car_color
-        ),
-        segments:trip_segments (*)
-      ''').eq('status', 'upcoming');
+      var query = _client
+          .from('trips')
+          .select('*, segments:trip_segments(*)')
+          .eq('status', 'upcoming');
 
       if (fromCity != null && fromCity.isNotEmpty) {
         query = query.eq('origin_city', fromCity);
@@ -38,8 +39,28 @@ class TripService {
         query = query.eq('destination_city', toCity);
       }
 
-      final response = await query.order('departure_time', ascending: true);
-      return List<Map<String, dynamic>>.from(response);
+      final trips = List<Map<String, dynamic>>.from(
+        await query.order('departure_time', ascending: true),
+      );
+      if (trips.isEmpty) return trips;
+
+      final driverIds = trips
+          .map((trip) => trip['driver_id'] as String)
+          .toSet()
+          .toList();
+      final drivers = await _client
+          .from('driver_public_profiles')
+          .select(
+            'id, name, avatar_url, rating, trips_count, car_model, car_color',
+          )
+          .inFilter('id', driverIds);
+      final driversById = {
+        for (final driver in drivers) driver['id'] as String: driver,
+      };
+
+      return trips.map((trip) {
+        return {...trip, 'driver': driversById[trip['driver_id']]};
+      }).toList();
     } catch (e) {
       // في حال حدوث خطأ أو عدم وجود شبكة، يُرجع قائمة فارغة
       return [];
@@ -58,11 +79,11 @@ class TripService {
   }) async {
     try {
       final user = _client.auth.currentUser;
-      final passengerId = user?.id ?? 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+      if (user == null) return false;
 
       await _client.from('bookings').insert({
         'trip_id': tripId,
-        'passenger_id': passengerId,
+        'passenger_id': user.id,
         'pickup_city': pickupCity,
         'dropoff_city': dropoffCity,
         'pickup_order': pickupOrder,
@@ -77,4 +98,3 @@ class TripService {
     }
   }
 }
-

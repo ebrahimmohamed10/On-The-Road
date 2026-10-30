@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/locale_provider.dart';
@@ -18,9 +19,9 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // ربط Supabase بحماية من التعطل في حال عدم إدخال المفاتيح بعد
-  if (AppConstants.supabaseUrl != 'YOUR_SUPABASE_URL' &&
-      AppConstants.supabaseUrl.startsWith('http')) {
+  // Supabase values are supplied using --dart-define at build/run time.
+  if (AppConstants.isSupabaseConfigured &&
+      AppConstants.supabaseUrl.startsWith('https://')) {
     try {
       await Supabase.initialize(
         url: AppConstants.supabaseUrl,
@@ -31,11 +32,7 @@ void main() async {
     }
   }
 
-  runApp(
-    const ProviderScope(
-      child: OnTheRoadApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: OnTheRoadApp()));
 }
 
 class OnTheRoadApp extends ConsumerWidget {
@@ -58,10 +55,7 @@ class OnTheRoadApp extends ConsumerWidget {
 
       // لغة التطبيق الديناميكية (عربي / English)
       locale: currentLocale,
-      supportedLocales: const [
-        Locale('ar'),
-        Locale('en'),
-      ],
+      supportedLocales: const [Locale('ar'), Locale('en')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

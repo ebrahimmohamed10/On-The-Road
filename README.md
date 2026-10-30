@@ -40,11 +40,20 @@ flutter test
 ## Supabase setup
 
 1. Create a Supabase project and open its SQL Editor.
-2. Run the contents of `supabase_schema.sql` to create the tables, seat-availability function, and row-level security policies.
-3. In `lib/core/constants/app_constants.dart`, set `supabaseUrl` and `supabaseAnonKey` to the project URL and its public client key. The application currently reads credentials from these source constants; it does **not** load `.env` files, `--dart-define` values, or other environment variables. Do not put a Supabase service-role key in the client app.
-4. Start the app with `flutter run`.
+2. Run the contents of `supabase_schema.sql` to create the baseline tables and function.
+3. Review the SQL in `supabase/migrations/` and run the migration files in timestamp order. They replace the baseline access policies with the Phase 1 policies and RPCs. Do not skip these migrations before using the client app.
+4. Provide the project URL and public client key at build/run time. The app reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` using Dart compile-time environment declarations:
 
-The project has no implemented environment-variable configuration at this time. Externalize the public URL and client key before distributing builds, and review the RLS policies before using real user data. `sample_data.sql` is optional demo data; inspect it before running because it drops the `profiles.id` foreign-key constraint to permit sample driver IDs.
+   ```sh
+   flutter run \
+     --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
+     --dart-define=SUPABASE_ANON_KEY=YOUR_PUBLISHABLE_OR_ANON_KEY
+   ```
+
+   Do not put a Supabase `service_role` key in the client app. The public key is not a substitute for RLS.
+5. Start the app with the same `--dart-define` values for your selected target.
+
+The project uses Dart `--dart-define` values; `.env` files are not loaded. Review the RLS policies before using real user data. `sample_data.sql` is optional demo data; inspect it before running because it drops the `profiles.id` foreign-key constraint to permit sample driver IDs. Phase 1 migrations are review-only until you apply them yourself.
 
 ## Project structure
 

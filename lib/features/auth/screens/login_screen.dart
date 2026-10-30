@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
+import '../services/auth_service.dart';
+import '../services/egyptian_phone_number.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
@@ -24,17 +28,41 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _sendOtp() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final phone = _phoneController.text.trim();
+    final phone = normalizeEgyptianPhoneNumber(_phoneController.text);
+    if (phone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.tr(
+              context,
+              ar: 'أدخل رقم هاتف مصري صحيحًا مثل 01111915092.',
+              en: 'Enter a valid Egyptian mobile number, such as 01111915092.',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
 
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await ref
+          .read(authServiceProvider)
+          .requestPhoneOtp(phone: phone, createUser: false);
       if (!mounted) return;
-      context.go('/auth/otp', extra: '+20 $phone');
-    } catch (e) {
+      context.go('/auth/otp', extra: {'phone': phone, 'registration': false});
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ: $e')),
+        SnackBar(
+          content: Text(
+            AppStrings.tr(
+              context,
+              ar: 'تعذر إرسال رمز التحقق. تحقق من الرقم وإعدادات Supabase ثم حاول مجددًا.',
+              en: 'Could not send the verification code. Check the phone number and Supabase setup, then try again.',
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -129,7 +157,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       // علم مصر ومفتاح +20
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
                         child: Row(
                           children: [
                             const Text('🇪🇬', style: TextStyle(fontSize: 20)),
@@ -161,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 en: 'Please enter phone number',
                               );
                             }
-                            if (value.trim().length < 10) {
+                            if (normalizeEgyptianPhoneNumber(value) == null) {
                               return AppStrings.tr(
                                 context,
                                 ar: 'رقم الهاتف غير صحيح',
@@ -178,7 +209,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             errorBorder: InputBorder.none,
                             focusedErrorBorder: InputBorder.none,
                             filled: false,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
                           ),
                         ),
                       ),

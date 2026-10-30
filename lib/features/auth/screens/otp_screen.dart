@@ -1,19 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
+import '../services/auth_service.dart';
+import '../services/egyptian_phone_number.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String phone;
-  const OtpScreen({super.key, required this.phone});
+  final bool registration;
+  final String? name;
+  final String? role;
+
+  const OtpScreen({
+    super.key,
+    required this.phone,
+    this.registration = false,
+    this.name,
+    this.role,
+  });
 
   @override
   ConsumerState<OtpScreen> createState() => _OtpScreenState();
 }
 
 class _OtpScreenState extends ConsumerState<OtpScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
 
@@ -28,16 +44,82 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     super.dispose();
   }
 
-  void _verifyOtp() {
-    final code = _controllers.map((c) => c.text).join();
-    if (code.length < 6) return;
+  Future<void> _verifyOtp() async {
+    if (_isLoading) return;
+    final code = normalizeNumeralDigits(_controllers.map((c) => c.text).join());
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(code)) return;
 
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
+    try {
+      await ref
+          .read(authServiceProvider)
+          .verifyPhoneOtp(
+            phone: widget.phone,
+            token: code,
+            registration: widget.registration,
+          );
       if (!mounted) return;
-      setState(() => _isLoading = false);
-      context.go('/verification/personal-details');
-    });
+      context.go('/passenger/home');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.tr(
+                context,
+                ar: 'تعذر التحقق من الرمز. تأكد من صحته وصلاحيته واتصالك، ثم حاول مجددًا.',
+                en: 'Could not verify the code. Check that it is correct and unexpired, then try again.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resendCode() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(authServiceProvider)
+          .requestPhoneOtp(
+            phone: widget.phone,
+            createUser: widget.registration,
+            fullName: widget.name,
+            role: widget.role,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.tr(
+              context,
+              ar: 'تم إرسال رمز تحقق جديد.',
+              en: 'A new verification code was sent.',
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.tr(
+                context,
+                ar: 'تعذر إعادة إرسال الرمز. تحقق من إعدادات Supabase وحاول مجددًا.',
+                en: 'Could not resend the code. Check Supabase setup and try again.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -153,7 +235,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       )
                     : Text(
                         AppStrings.verifyBtn(context),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
               ),
 
@@ -162,7 +247,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               // إعادة إرسال الرمز
               Center(
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: _isLoading ? null : _resendCode,
                   child: Text(
                     AppStrings.resendCode(context),
                     style: TextStyle(

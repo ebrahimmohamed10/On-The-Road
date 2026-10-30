@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../constants/app_constants.dart';
 // Screens
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/hero_welcome_screen.dart';
@@ -26,25 +30,38 @@ import '../../features/profile/screens/profile_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
+  final authStream = AppConstants.isSupabaseConfigured
+      ? Supabase.instance.client.auth.onAuthStateChange
+      : const Stream<dynamic>.empty();
+  final authRefresh = GoRouterRefreshStream(authStream);
+
+  final router = GoRouter(
     initialLocation: '/splash',
+    refreshListenable: authRefresh,
     redirect: (context, state) {
       bool isAuth = false;
-      try {
-        final session = Supabase.instance.client.auth.currentSession;
-        isAuth = session != null;
-      } catch (_) {
-        isAuth = false;
+      if (AppConstants.isSupabaseConfigured) {
+        try {
+          final session = Supabase.instance.client.auth.currentSession;
+          isAuth = session != null;
+        } catch (_) {
+          isAuth = false;
+        }
       }
 
       final isSplash = state.matchedLocation == '/splash';
       final isWelcome = state.matchedLocation == '/welcome';
       final isGoingToAuth = state.matchedLocation.startsWith('/auth');
-      final isGoingToVerification = state.matchedLocation.startsWith('/verification');
+      final isGoingToVerification = state.matchedLocation.startsWith(
+        '/verification',
+      );
 
-      if (isSplash || isWelcome) return null;
-      if (!isAuth && !isGoingToAuth && !isGoingToVerification) return '/welcome';
-      if (isAuth && (isGoingToAuth || isWelcome)) return '/passenger/home';
+      if (isSplash) return null;
+      if (!isAuth && (isWelcome || isGoingToAuth || isGoingToVerification)) {
+        return null;
+      }
+      if (!isAuth) return '/auth/login';
+      if (isGoingToAuth || isWelcome || isSplash) return '/passenger/home';
       return null;
     },
     routes: [
@@ -53,13 +70,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/welcome', builder: (_, _) => const HeroWelcomeScreen()),
 
       // Auth Flow
-      GoRoute(path: '/auth/login', builder: (_, _) =>  LoginScreen()),
-      GoRoute(path: '/auth/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(path: '/auth/login', builder: (_, _) => LoginScreen()),
+      GoRoute(
+        path: '/auth/register',
+        builder: (_, _) => const RegisterScreen(),
+      ),
       GoRoute(
         path: '/auth/otp',
         builder: (_, state) {
-          final phone = state.extra as String? ?? '';
-          return OtpScreen(phone: phone);
+          final data = state.extra as Map<String, dynamic>? ?? const {};
+          return OtpScreen(
+            phone: data['phone'] as String? ?? '',
+            registration: data['registration'] as bool? ?? false,
+            name: data['name'] as String?,
+            role: data['role'] as String?,
+          );
         },
       ),
 
@@ -82,8 +107,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Passenger Flow
-      GoRoute(path: '/passenger/home', builder: (_, _) => const PassengerHomeScreen()),
-      GoRoute(path: '/passenger/search', builder: (_, _) => const SearchTripsScreen()),
+      GoRoute(
+        path: '/passenger/home',
+        builder: (_, _) => const PassengerHomeScreen(),
+      ),
+      GoRoute(
+        path: '/passenger/search',
+        builder: (_, _) => const SearchTripsScreen(),
+      ),
       GoRoute(
         path: '/passenger/results',
         builder: (_, state) {
@@ -143,8 +174,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           return BookingConfirmationScreen(confirmationData: data);
         },
       ),
-      GoRoute(path: '/passenger/bookings', builder: (_, _) => const MyBookingsScreen()),
-      GoRoute(path: '/passenger/profile',  builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+        path: '/passenger/bookings',
+        builder: (_, _) => const MyBookingsScreen(),
+      ),
+      GoRoute(
+        path: '/passenger/profile',
+        builder: (_, _) => const ProfileScreen(),
+      ),
       GoRoute(
         path: '/passenger/rate-trip',
         builder: (_, state) {
@@ -156,8 +193,29 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Chat
       GoRoute(
         path: '/chat/:bookingId',
-        builder: (_, state) => ChatScreen(bookingId: state.pathParameters['bookingId']!),
+        builder: (_, state) =>
+            ChatScreen(bookingId: state.pathParameters['bookingId']!),
       ),
     ],
   );
+
+  ref.onDispose(() {
+    router.dispose();
+    authRefresh.dispose();
+  });
+  return router;
 });
+
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    _subscription = stream.listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}

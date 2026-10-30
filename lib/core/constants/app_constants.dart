@@ -4,9 +4,14 @@ class AppConstants {
   static const String appName = 'On the Road';
   static const String appNameAr = 'على الطريق';
 
-  // Supabase Credentials
-  static const String supabaseUrl = 'https://chwbyhqcmxedhfezdmfi.supabase.co';
-  static const String supabaseAnonKey = 'sb_publishable_CndQvhb0TbeinhKYbvNNpQ_Ewbp1-55';
+  // Supply public client configuration at build/run time. Never use a
+  // Supabase service_role key in a Flutter client.
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+  );
+  static const bool isSupabaseConfigured =
+      supabaseUrl != '' && supabaseAnonKey != '';
 
   // Verification statuses
   static const String verifUnverified = 'unverified';
