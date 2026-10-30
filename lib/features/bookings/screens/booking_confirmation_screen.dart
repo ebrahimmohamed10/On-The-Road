@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
@@ -8,26 +9,43 @@ import '../../../shared/widgets/app_bottom_nav.dart';
 class BookingConfirmationScreen extends ConsumerWidget {
   final Map<String, dynamic>? confirmationData;
 
-  const BookingConfirmationScreen({
-    super.key,
-    this.confirmationData,
-  });
+  const BookingConfirmationScreen({super.key, this.confirmationData});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-    final fromCity = confirmationData?['from'] ?? (isArabic ? 'القاهرة' : 'Cairo');
-    final toCity = confirmationData?['to'] ?? (isArabic ? 'الإسكندرية' : 'Alexandria');
-    final driverName = confirmationData?['driverName'] ?? (isArabic ? 'أحمد حسن' : 'Ahmed Hassan');
-    final seatsCount = (confirmationData?['seatsCount'] as num?)?.toInt() ?? 1;
-    final totalPrice = (confirmationData?['totalPrice'] as num?)?.toInt() ?? 180;
-    final bookingCode = confirmationData?['bookingCode'] ?? '#OTR-2841';
+    if (confirmationData?['bookingId'] == null ||
+        confirmationData?['totalPrice'] == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Booking not confirmed')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('No successful booking result was provided.'),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: () => context.go('/passenger/home'),
+                child: const Text('Return to trips'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
-    final dateHeader = isArabic ? 'الأربعاء ٢٨ أكتوبر ٢٠٢٦' : 'Wed, 28 Oct 2026';
-    final driverInitials = isArabic ? 'أح' : 'AH';
-
+    final fromCity = confirmationData!['from'] as String;
+    final toCity = confirmationData!['to'] as String;
+    final driverName = confirmationData!['driverName'] as String? ?? '';
+    final seatsCount = (confirmationData!['seatsCount'] as num).toInt();
+    final totalPrice = (confirmationData!['totalPrice'] as num).toDouble();
+    final bookingCode = confirmationData!['bookingCode'].toString();
+    final dateHeader = confirmationData!['date']?.toString() ?? '';
+    final driverInitials = driverName.isEmpty
+        ? '?'
+        : driverName.substring(0, 1);
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -86,10 +104,7 @@ class BookingConfirmationScreen extends ConsumerWidget {
 
             Text(
               AppStrings.weWillNotifyDriver(context),
-              style: TextStyle(
-                fontSize: 13,
-                color: theme.hintColor,
-              ),
+              style: TextStyle(fontSize: 13, color: theme.hintColor),
               textAlign: TextAlign.center,
             ),
 
@@ -130,7 +145,10 @@ class BookingConfirmationScreen extends ConsumerWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(12),
@@ -166,9 +184,9 @@ class BookingConfirmationScreen extends ConsumerWidget {
                   // المسار الزمني (Timeline: Cairo -> Alexandria)
                   _buildTimelineStop(
                     context,
-                    time: '08:30',
+                    time: '',
                     cityName: fromCity,
-                    stationName: isArabic ? 'محطة رمسيس' : 'Ramses Station',
+                    stationName: '',
                     isOrigin: true,
                   ),
 
@@ -184,9 +202,9 @@ class BookingConfirmationScreen extends ConsumerWidget {
 
                   _buildTimelineStop(
                     context,
-                    time: '11:00',
+                    time: '',
                     cityName: toCity,
-                    stationName: isArabic ? 'محطة سيدي جابر' : 'Sidi Gaber Station',
+                    stationName: '',
                     isOrigin: false,
                   ),
 
@@ -246,7 +264,11 @@ class BookingConfirmationScreen extends ConsumerWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)),
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 16,
+                                color: Color(0xFFF59E0B),
+                              ),
                               const SizedBox(width: 3),
                               const Text(
                                 '4.9',
@@ -370,8 +392,11 @@ class BookingConfirmationScreen extends ConsumerWidget {
             border: Border.all(color: Colors.white, width: 2.5),
             boxShadow: [
               BoxShadow(
-                color: (isOrigin ? const Color(0xFFF59E0B) : const Color(0xFF1E293B))
-                    .withValues(alpha: 0.3),
+                color:
+                    (isOrigin
+                            ? const Color(0xFFF59E0B)
+                            : const Color(0xFF1E293B))
+                        .withValues(alpha: 0.3),
                 blurRadius: 4,
               ),
             ],
@@ -394,10 +419,7 @@ class BookingConfirmationScreen extends ConsumerWidget {
               const SizedBox(height: 2),
               Text(
                 stationName,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: theme.hintColor,
-                ),
+                style: TextStyle(fontSize: 11, color: theme.hintColor),
               ),
             ],
           ),
@@ -416,4 +438,3 @@ class BookingConfirmationScreen extends ConsumerWidget {
     );
   }
 }
-

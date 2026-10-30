@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
@@ -9,10 +10,7 @@ import '../../trips/services/trip_service.dart';
 class PaymentScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? paymentData;
 
-  const PaymentScreen({
-    super.key,
-    this.paymentData,
-  });
+  const PaymentScreen({super.key, this.paymentData});
 
   @override
   ConsumerState<PaymentScreen> createState() => _PaymentScreenState();
@@ -22,43 +20,74 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   int _selectedMethod = 0; // 0 = Cash, 1 = Vodafone Cash, 2 = Card
   bool _isLoading = false;
 
+  String? _errorMessage;
+
   Future<void> _onConfirmAndSend() async {
-    setState(() => _isLoading = true);
+    final data = widget.paymentData;
+    final tripId = data?['tripId'] as String?;
+    final pickupCity = data?['pickupCity'] as String?;
+    final dropoffCity = data?['dropoffCity'] as String?;
+    final seatsCount = (data?['seatsCount'] as num?)?.toInt();
 
-    final fromCity = widget.paymentData?['from'] ?? 'القاهرة';
-    final toCity = widget.paymentData?['to'] ?? 'الإسكندرية';
-    final driverName = widget.paymentData?['driverName'] ?? 'أحمد حسن';
-    final seatsCount = (widget.paymentData?['seatsCount'] as num?)?.toInt() ?? 1;
-    final pricePerSeat = (widget.paymentData?['price'] as num?)?.toInt() ?? 180;
-    final totalPrice = seatsCount * pricePerSeat;
-    final tripId = widget.paymentData?['tripId'] ?? 'aaaa1111-1111-1111-1111-111111111111';
-
-    // حفظ الحجز في Supabase
-    try {
-      final service = ref.read(tripServiceProvider);
-      await service.createBooking(
-        tripId: tripId,
-        pickupCity: fromCity,
-        dropoffCity: toCity,
-        seatsBooked: seatsCount,
-        totalPrice: totalPrice.toDouble(),
+    if (tripId == null ||
+        pickupCity == null ||
+        dropoffCity == null ||
+        seatsCount == null) {
+      setState(
+        () => _errorMessage =
+            'Booking details are incomplete. Return to trip selection.',
       );
-    } catch (_) {}
+      return;
+    }
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+    final service = ref.read(tripServiceProvider);
+    if (service.currentUser == null) {
+      if (mounted) context.go('/auth/login');
+      return;
+    }
 
-    context.go('/passenger/booking-confirmation', extra: {
-      'from': fromCity,
-      'to': toCity,
-      'driverName': driverName,
-      'seatsCount': seatsCount,
-      'pricePerSeat': pricePerSeat,
-      'totalPrice': totalPrice,
-      'date': widget.paymentData?['date'] ?? 'الأربعاء ٢٨ أكتوبر',
-      'time': widget.paymentData?['time'] ?? '08:30 ص',
-      'bookingCode': '#OTR-2841',
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      final booking = await service.createBooking(
+        tripId: tripId,
+        pickupCity: pickupCity,
+        dropoffCity: dropoffCity,
+        seatsBooked: seatsCount,
+      );
+      if (!mounted) return;
+      final totalPrice = (booking['total_price'] as num).toDouble();
+      setState(() => _isLoading = false);
+      context.go(
+        '/passenger/booking-confirmation',
+        extra: {
+          'from': pickupCity,
+          'to': dropoffCity,
+          'tripId': tripId,
+          'departureTime': data?['departureTime'],
+          'driverName': data?['driverName'] ?? '',
+          'seatsCount': seatsCount,
+          'totalPrice': totalPrice,
+          'date': data?['departureTime'],
+          'bookingId': booking['id'].toString(),
+          'bookingCode': booking['id'].toString(),
+        },
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        final message = error.toString();
+        _errorMessage =
+            message.contains('SocketException') ||
+                message.contains('ClientException')
+            ? 'Network error. Check your connection and try again.'
+            : message.replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   @override
@@ -67,21 +96,22 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-    final fromCity = widget.paymentData?['from'] ?? (isArabic ? 'القاهرة' : 'Cairo');
-    final toCity = widget.paymentData?['to'] ?? (isArabic ? 'الإسكندرية' : 'Alexandria');
-    final driverName = widget.paymentData?['driverName'] ?? (isArabic ? 'أحمد حسن' : 'Ahmed Hassan');
-    final seatsCount = (widget.paymentData?['seatsCount'] as num?)?.toInt() ?? 1;
-    final pricePerSeat = (widget.paymentData?['price'] as num?)?.toInt() ?? 180;
-    final total = seatsCount * pricePerSeat;
-
-    final dateText = isArabic ? 'الأربعاء ٢٨ أكتوبر · ٨:٣٠ ص' : 'Wed, 28 Oct · 8:30 AM';
-    final driverInitials = isArabic ? 'أح' : 'AH';
-
+    final fromCity = widget.paymentData?['pickupCity'] as String? ?? '';
+    final toCity = widget.paymentData?['dropoffCity'] as String? ?? '';
+    final driverName = widget.paymentData?['driverName'] as String? ?? '';
+    final seatsCount =
+        (widget.paymentData?['seatsCount'] as num?)?.toInt() ?? 0;
+    final dateText = widget.paymentData?['departureTime']?.toString() ?? '';
+    final driverInitials = driverName.isEmpty
+        ? '?'
+        : driverName.substring(0, 1);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(
-            isArabic ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new_rounded,
+            isArabic
+                ? Icons.arrow_forward_ios_rounded
+                : Icons.arrow_back_ios_new_rounded,
             size: 20,
           ),
           onPressed: () {
@@ -147,10 +177,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   // التاريخ والميعاد
                   Text(
                     dateText,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.hintColor,
-                    ),
+                    style: TextStyle(fontSize: 12, color: theme.hintColor),
                   ),
                   const Divider(height: 20),
                   // السائق
@@ -217,7 +244,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             _buildPaymentMethodOption(
               index: 1,
               icon: Icons.smartphone_rounded,
-              iconBgColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              iconBgColor: isDark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFF1F5F9),
               iconColor: const Color(0xFF64748B),
               title: AppStrings.vodafoneCash(context),
             ),
@@ -228,7 +257,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             _buildPaymentMethodOption(
               index: 2,
               icon: Icons.credit_card_rounded,
-              iconBgColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              iconBgColor: isDark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFF1F5F9),
               iconColor: const Color(0xFF64748B),
               title: AppStrings.bankCard(context),
             ),
@@ -254,14 +285,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        AppStrings.seatCalc(context, seatsCount, pricePerSeat),
+                        '$seatsCount seats ; fare calculated by server',
                         style: TextStyle(
                           fontSize: 13,
                           color: theme.textTheme.bodyMedium?.color,
                         ),
                       ),
                       Text(
-                        '$total ${AppStrings.currency(context)}',
+                        'Calculated by server',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -277,10 +308,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     children: [
                       Text(
                         AppStrings.serviceFee(context),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: theme.hintColor,
-                        ),
+                        style: TextStyle(fontSize: 13, color: theme.hintColor),
                       ),
                       Text(
                         '0 ${AppStrings.currency(context)}',
@@ -306,7 +334,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                         ),
                       ),
                       Text(
-                        '$total ${AppStrings.currency(context)}',
+                        'Calculated by server',
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 17,
@@ -345,6 +373,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             // ==========================================
             // 4. الزر الكحلي: تأكيد وإرسال الطلب
             // ==========================================
+            if (_errorMessage != null) ...[
+              Text(
+                _errorMessage!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+              const SizedBox(height: 12),
+            ],
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0F172A),
@@ -438,10 +473,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: theme.hintColor,
-                      ),
+                      style: TextStyle(fontSize: 11, color: theme.hintColor),
                     ),
                   ],
                 ],
@@ -453,7 +485,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               isSelected
                   ? Icons.radio_button_checked_rounded
                   : Icons.radio_button_off_rounded,
-              color: isSelected ? const Color(0xFFF59E0B) : const Color(0xFFCBD5E1),
+              color: isSelected
+                  ? const Color(0xFFF59E0B)
+                  : const Color(0xFFCBD5E1),
               size: 22,
             ),
           ],
@@ -462,4 +496,3 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     );
   }
 }
-

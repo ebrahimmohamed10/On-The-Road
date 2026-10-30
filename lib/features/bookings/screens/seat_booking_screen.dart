@@ -1,113 +1,77 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 
-class SeatBookingScreen extends ConsumerStatefulWidget {
+class SeatBookingScreen extends StatefulWidget {
   final Map<String, dynamic>? bookingData;
   const SeatBookingScreen({super.key, this.bookingData});
 
   @override
-  ConsumerState<SeatBookingScreen> createState() => _SeatBookingScreenState();
+  State<SeatBookingScreen> createState() => _SeatBookingScreenState();
 }
 
-class _SeatBookingScreenState extends ConsumerState<SeatBookingScreen> {
-  final Set<int> _selectedSeats = {1};
-  final Set<int> _occupiedSeats = {3}; // مقعد محجوز مسبقاً
+class _SeatBookingScreenState extends State<SeatBookingScreen> {
+  String? _pickupCity;
+  String? _dropoffCity;
+  int _seatCount = 0;
 
-  void _toggleSeat(int seatNumber) {
-    if (_occupiedSeats.contains(seatNumber)) return;
-    setState(() {
-      if (_selectedSeats.contains(seatNumber)) {
-        if (_selectedSeats.length > 1) {
-          _selectedSeats.remove(seatNumber);
-        }
-      } else {
-        _selectedSeats.add(seatNumber);
-      }
-    });
-  }
-
-  void _goToPayment() {
-    final tripId = widget.bookingData?['tripId'] ?? 'aaaa1111-1111-1111-1111-111111111111';
-    final price = widget.bookingData?['price'] ?? 180;
-    final driverName = widget.bookingData?['driverName'] ?? 'أحمد حسن';
-
-    context.push('/passenger/payment', extra: {
-      'tripId': tripId,
-      'seatsCount': _selectedSeats.length,
-      'driverName': driverName,
-      'price': price,
-      'from': 'القاهرة',
-      'to': 'الإسكندرية',
-    });
-  }
-
-  Widget _buildSeatWidget(int seatNumber, String label) {
-    final isSelected = _selectedSeats.contains(seatNumber);
-    final isOccupied = _occupiedSeats.contains(seatNumber);
-
-    Color bgColor = Colors.transparent;
-    Color iconColor = const Color(0xFF64748B);
-    Color borderColor = const Color(0xFFE2E8F0);
-
-    if (isOccupied) {
-      bgColor = const Color(0xFFCBD5E1);
-      iconColor = const Color(0xFF94A3B8);
-      borderColor = Colors.transparent;
-    } else if (isSelected) {
-      bgColor = const Color(0xFFF59E0B);
-      iconColor = Colors.white;
-      borderColor = const Color(0xFFF59E0B);
+  List<String> get _stops {
+    final legs = (widget.bookingData?['legs'] as List?) ?? const [];
+    if (legs.isNotEmpty) {
+      final ordered =
+          List<Map<String, dynamic>>.from(
+            legs.map((leg) => Map<String, dynamic>.from(leg)),
+          )..sort(
+            (a, b) => (a['segment_order'] as num).compareTo(
+              b['segment_order'] as num,
+            ),
+          );
+      return [
+        ordered.first['from_city'] as String,
+        ...ordered.map((leg) => leg['to_city'] as String),
+      ];
     }
+    return List<String>.from(
+      (widget.bookingData?['waypoints'] as List?) ?? const [],
+    );
+  }
 
-    return InkWell(
-      onTap: isOccupied ? null : () => _toggleSeat(seatNumber),
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 64,
-        height: 72,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor, width: 1.5),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.airline_seat_recline_extra_rounded,
-              color: iconColor,
-              size: 28,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : iconColor,
-              ),
-            ),
-          ],
-        ),
-      ),
+  int get _seatCapacity =>
+      (widget.bookingData?['total_seats'] as num?)?.toInt() ?? 0;
+
+  bool get _canContinue =>
+      widget.bookingData?['id'] != null &&
+      _pickupCity != null &&
+      _dropoffCity != null &&
+      _stops.indexOf(_pickupCity!) < _stops.indexOf(_dropoffCity!) &&
+      _seatCount > 0;
+
+  void _continue() {
+    if (!_canContinue) return;
+    context.push(
+      '/passenger/payment',
+      extra: {
+        'tripId': widget.bookingData!['id'].toString(),
+        'pickupCity': _pickupCity,
+        'dropoffCity': _dropoffCity,
+        'seatsCount': _seatCount,
+        'driverName': widget.bookingData?['driverName'] ?? '',
+        'departureTime': widget.bookingData?['departure_time'],
+        'legs': widget.bookingData?['legs'],
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final basePrice = widget.bookingData?['price'] ?? 120;
-    final totalPrice = _selectedSeats.length * basePrice;
+    final stops = _stops;
+    final hasTrip = widget.bookingData?['id'] != null && stops.length >= 2;
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
         title: Text(AppStrings.confirmBooking(context)),
         actions: const [
           Padding(
@@ -116,195 +80,80 @@ class _SeatBookingScreenState extends ConsumerState<SeatBookingScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppStrings.selectSeats(context),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+      body: !hasTrip
+          ? const Center(
+              child: Text(
+                'Trip route data is unavailable. Please return to search.',
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              AppStrings.tr(context, ar: 'حدد المقاعد المفضلة لك داخل السيارة', en: 'Choose your desired seats inside the vehicle'),
-              style: theme.textTheme.bodyMedium,
-            ),
-
-            const SizedBox(height: 24),
-
-            // رسم بياني لمقاعد السيارة — مطابق لـ Figma
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: theme.dividerColor.withValues(alpha: 0.15),
-                ),
-              ),
-              child: Column(
-                children: [
-                  // الصف الأمامي (سائق + راكب أمامي)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // مقعد السائق (غير متاح)
-                      Container(
-                        width: 64,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.airline_seat_recline_normal_rounded, color: Color(0xFF0F172A), size: 26),
-                            const SizedBox(height: 4),
-                            Text(
-                              AppStrings.driver(context),
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // المقعد الأمامي
-                      _buildSeatWidget(1, AppStrings.tr(context, ar: 'أمامي', en: 'Front')),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-                  const Divider(height: 1),
-                  const SizedBox(height: 20),
-
-                  // الصف الخلفي (3 مقاعد)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildSeatWidget(2, AppStrings.tr(context, ar: 'يسار', en: 'Left')),
-                      _buildSeatWidget(3, AppStrings.tr(context, ar: 'وسط', en: 'Mid')),
-                      _buildSeatWidget(4, AppStrings.tr(context, ar: 'يمين', en: 'Right')),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // دليل الألوان (Legend)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildLegend(const Color(0xFFF59E0B), AppStrings.tr(context, ar: 'محدد', en: 'Selected')),
-                      const SizedBox(width: 16),
-                      _buildLegend(const Color(0xFFE2E8F0), AppStrings.tr(context, ar: 'متاح', en: 'Available')),
-                      const SizedBox(width: 16),
-                      _buildLegend(const Color(0xFFCBD5E1), AppStrings.tr(context, ar: 'محجوز', en: 'Booked')),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // طريقة الدفع
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.dividerColor.withValues(alpha: 0.15),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.payments_rounded, color: Color(0xFF10B981)),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppStrings.paymentMethod(context),
-                          style: TextStyle(fontSize: 11, color: theme.hintColor),
-                        ),
-                        Text(
-                          AppStrings.cashToDriver(context),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ملخص المبلغ الإجمالي
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            )
+          : ListView(
+              padding: const EdgeInsets.all(20),
               children: [
-                Text(
-                  AppStrings.totalAmount(context),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                Text('Choose your route', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: _pickupCity,
+                  decoration: const InputDecoration(labelText: 'Pickup stop'),
+                  items: stops
+                      .take(stops.length - 1)
+                      .map(
+                        (city) =>
+                            DropdownMenuItem(value: city, child: Text(city)),
+                      )
+                      .toList(),
+                  onChanged: (city) => setState(() {
+                    _pickupCity = city;
+                    if (city != null &&
+                        _dropoffCity != null &&
+                        stops.indexOf(_dropoffCity!) <= stops.indexOf(city)) {
+                      _dropoffCity = null;
+                    }
+                  }),
                 ),
-                Text(
-                  '$totalPrice ${AppStrings.currency(context)}',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFFF59E0B),
-                  ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  value: _dropoffCity,
+                  decoration: const InputDecoration(labelText: 'Drop-off stop'),
+                  items: stops
+                      .where(
+                        (city) =>
+                            _pickupCity == null ||
+                            stops.indexOf(city) > stops.indexOf(_pickupCity!),
+                      )
+                      .map(
+                        (city) =>
+                            DropdownMenuItem(value: city, child: Text(city)),
+                      )
+                      .toList(),
+                  onChanged: (city) => setState(() => _dropoffCity = city),
+                ),
+                const SizedBox(height: 28),
+                Text('Number of seats', style: theme.textTheme.titleMedium),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: _seatCount > 0
+                          ? () => setState(() => _seatCount--)
+                          : null,
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text('$_seatCount', style: theme.textTheme.titleLarge),
+                    IconButton(
+                      onPressed: _seatCount < _seatCapacity
+                          ? () => setState(() => _seatCount++)
+                          : null,
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                    Text('of $_seatCapacity seats available on this trip'),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                FilledButton(
+                  onPressed: _canContinue ? _continue : null,
+                  child: Text(AppStrings.proceedToPayment(context)),
                 ),
               ],
             ),
-
-            const SizedBox(height: 28),
-
-            // زر المتابعة إلى الدفع
-            ElevatedButton(
-              onPressed: _goToPayment,
-              child: Text(AppStrings.proceedToPayment(context)),
-            ),
-
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLegend(Color color, String label) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 11)),
-      ],
     );
   }
 }
-

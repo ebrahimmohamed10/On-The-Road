@@ -21,6 +21,8 @@ class TripService {
   final SupabaseClient _client;
   TripService(this._client);
 
+  User? get currentUser => _client.auth.currentUser;
+
   /// جلب الرحلات الحية من سيرفر Supabase مع بيانات السائق والمقاطع
   Future<List<Map<String, dynamic>>> getTrips({
     String? fromCity,
@@ -68,33 +70,35 @@ class TripService {
   }
 
   /// إنشاء حجز جديد في جدول bookings
-  Future<bool> createBooking({
+  /// Creates a booking through the server-side atomic reservation RPC.
+  Future<Map<String, dynamic>> createBooking({
     required String tripId,
     required String pickupCity,
     required String dropoffCity,
     required int seatsBooked,
-    required double totalPrice,
-    int pickupOrder = 1,
-    int dropoffOrder = 2,
   }) async {
-    try {
-      final user = _client.auth.currentUser;
-      if (user == null) return false;
-
-      await _client.from('bookings').insert({
-        'trip_id': tripId,
-        'passenger_id': user.id,
-        'pickup_city': pickupCity,
-        'dropoff_city': dropoffCity,
-        'pickup_order': pickupOrder,
-        'dropoff_order': dropoffOrder,
-        'seats_booked': seatsBooked,
-        'total_price': totalPrice,
-        'status': 'confirmed',
-      });
-      return true;
-    } catch (e) {
-      return false;
+    if (_client.auth.currentUser == null) {
+      throw const BookingAuthException();
     }
+
+    final result = await _client.rpc(
+      'create_booking',
+      params: {
+        'p_trip_id': tripId,
+        'p_pickup_city': pickupCity,
+        'p_dropoff_city': dropoffCity,
+        'p_seats_booked': seatsBooked,
+      },
+    );
+
+    if (result is Map<String, dynamic>) return result;
+    if (result is List && result.isNotEmpty && result.first is Map) {
+      return Map<String, dynamic>.from(result.first as Map);
+    }
+    throw const FormatException('Booking RPC returned an unexpected response.');
   }
+}
+
+class BookingAuthException implements Exception {
+  const BookingAuthException();
 }

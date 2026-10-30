@@ -18,82 +18,63 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
   List<Map<String, dynamic>> _liveTrips = [];
   bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _fallbackTrips = [
-    {
-      'id': 'trip-1',
-      'driverName': 'محمود السيد',
-      'driverRating': 4.9,
-      'tripsCount': 142,
-      'carModel': 'تويوتا كورولا 2022',
-      'departureTime': '08:00 ص',
-      'arrivalTime': '10:30 ص',
-      'availableSeats': 3,
-      'price': 120,
-      'waypoints': ['القاهرة', 'طنطا', 'الإسكندرية'],
-    },
-    {
-      'id': 'trip-2',
-      'driverName': 'كريم حسني',
-      'driverRating': 4.8,
-      'tripsCount': 89,
-      'carModel': 'هيونداي إلنترا 2023',
-      'departureTime': '09:30 ص',
-      'arrivalTime': '12:00 م',
-      'availableSeats': 1,
-      'price': 110,
-      'waypoints': ['القاهرة', 'بنها', 'دمنهور', 'الإسكندرية'],
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
     _fetchLiveTrips();
   }
 
-  Future<void> _fetchLiveTrips() async {
+Future<void> _fetchLiveTrips() async {
     final fromCity = widget.searchParams?['from'] as String?;
     final toCity = widget.searchParams?['to'] as String?;
-
     final service = ref.read(tripServiceProvider);
     final results = await service.getTrips(fromCity: fromCity, toCity: toCity);
 
-    if (mounted) {
-      setState(() {
-        if (results.isNotEmpty) {
-          _liveTrips = results.map((t) {
-            final driver = t['driver'] as Map<String, dynamic>?;
-            final segments = (t['segments'] as List?) ?? [];
-            final price = segments.isNotEmpty
-                ? (segments.last['price'] as num).toInt()
-                : 120;
-
-            return {
-              'id': t['id'].toString(),
-              'driverName': driver?['name'] ?? 'سائق على الطريق',
-              'driverRating': (driver?['rating'] as num?)?.toDouble() ?? 5.0,
-              'tripsCount': driver?['trips_count'] ?? 10,
-              'carModel': driver?['car_model'] ?? 'سيارة خاصة',
-              'departureTime': '08:00 ص',
-              'arrivalTime': '10:30 ص',
-              'availableSeats': t['total_seats'] ?? 3,
-              'price': price,
-              'waypoints': [t['origin_city'], ...segments.map((s) => s['to_city'])],
-            };
-          }).toList();
-        } else {
-          _liveTrips = _fallbackTrips;
-        }
-        _isLoading = false;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _liveTrips = results.map((trip) {
+        final driver = trip['driver'] as Map<String, dynamic>?;
+        final segments = List<Map<String, dynamic>>.from(
+          ((trip['segments'] as List?) ?? []).map(
+            (segment) => Map<String, dynamic>.from(segment),
+          ),
+        )..sort(
+          (a, b) => (a['segment_order'] as num).compareTo(
+            b['segment_order'] as num,
+          ),
+        );
+        final legs = segments
+            .where((segment) => segment['segment_kind'] == 'leg')
+            .toList();
+        return {
+          ...trip,
+          'id': trip['id'].toString(),
+          'driverName': driver?['name'] ?? '',
+          'driverRating': (driver?['rating'] as num?)?.toDouble() ?? 0,
+          'tripsCount': driver?['trips_count'] ?? 0,
+          'carModel': driver?['car_model'] ?? '',
+          'availableSeats': trip['total_seats'],
+          'departureTime': trip['departure_time']?.toString() ?? '',
+          'arrivalTime': trip['arrival_time']?.toString() ?? '',
+          'segments': segments,
+          'legs': legs,
+          'fares': segments
+              .where((segment) => segment['segment_kind'] == 'fare_override')
+              .toList(),
+          'waypoints': [
+            if (legs.isNotEmpty) legs.first['from_city'],
+            ...legs.map((segment) => segment['to_city']),
+          ],
+        };
+      }).toList();
+      _isLoading = false;
+    });
   }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fromCity = widget.searchParams?['from'] ?? 'القاهرة';
-    final toCity = widget.searchParams?['to'] ?? 'الإسكندرية';
+    final fromCity = widget.searchParams?['from'] ?? '';
+    final toCity = widget.searchParams?['to'] ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -137,7 +118,9 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: Color(0xFFF59E0B)),
                   )
-                : RefreshIndicator(
+                : _liveTrips.isEmpty
+                    ? const Center(child: Text('No trips were found.'))
+                    : RefreshIndicator(
                     onRefresh: _fetchLiveTrips,
                     color: const Color(0xFFF59E0B),
                     child: ListView.builder(
@@ -226,32 +209,10 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                       ),
                     ],
                   ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '${trip['price']}',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFFF59E0B),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        AppStrings.currency(context),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.hintColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+                  const Text(
+                    'Choose stops to see fare',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),              const SizedBox(height: 8),
               Row(
                 children: [
                   const Icon(Icons.route_rounded, size: 16, color: Color(0xFFF59E0B)),
@@ -281,7 +242,7 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                         radius: 18,
                         backgroundColor: const Color(0xFF0F172A),
                         child: Text(
-                          trip['driverName'].toString().substring(0, 1),
+                          trip['driverName'].toString().isEmpty ? '?' : trip['driverName'].toString().substring(0, 1),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -335,7 +296,7 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          AppStrings.availableSeats(context, trip['availableSeats']),
+                          'Capacity: ${trip["availableSeats"]}',
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

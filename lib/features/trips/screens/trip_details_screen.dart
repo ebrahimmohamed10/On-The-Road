@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 
@@ -8,19 +9,19 @@ class TripDetailsScreen extends ConsumerWidget {
   final String tripId;
   final Map<String, dynamic>? tripData;
 
-  const TripDetailsScreen({
-    super.key,
-    required this.tripId,
-    this.tripData,
-  });
+  const TripDetailsScreen({super.key, required this.tripId, this.tripData});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final driverName = tripData?['driverName'] ?? 'محمود السيد';
-    final carModel = tripData?['carModel'] ?? 'تويوتا كورولا 2022';
-    final price = tripData?['price'] ?? 120;
-
+    final driverName = tripData?['driverName'] as String? ?? '';
+    final carModel = tripData?['carModel'] as String? ?? '';
+    final legs = List<Map<String, dynamic>>.from(
+      (tripData?['legs'] as List?) ?? const [],
+    );
+    final fares = List<Map<String, dynamic>>.from(
+      (tripData?['fares'] as List?) ?? const [],
+    );
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -61,26 +62,22 @@ class TripDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  _buildRouteStep(
-                    context,
-                    time: '08:00 ص',
-                    city: 'القاهرة',
-                    location: 'محطة مترو رمسيس',
-                    isStart: true,
-                  ),
-                  _buildRouteStep(
-                    context,
-                    time: '09:15 ص',
-                    city: 'طنطا',
-                    location: 'ميدان المحطة (توقف ونزول)',
-                  ),
-                  _buildRouteStep(
-                    context,
-                    time: '10:30 ص',
-                    city: 'الإسكندرية',
-                    location: 'محطة سيدي جابر',
-                    isEnd: true,
-                  ),
+                  if (legs.isEmpty)
+                    const Text('No route stops are configured for this trip.')
+                  else ...[
+                    Text(legs.first['from_city'] as String),
+                    for (final leg in legs)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.arrow_downward, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(leg['to_city'] as String)),
+                          ],
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),
@@ -102,10 +99,18 @@ class TripDetailsScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.calculate_rounded, color: Color(0xFFF59E0B), size: 20),
+                      const Icon(
+                        Icons.calculate_rounded,
+                        color: Color(0xFFF59E0B),
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
-                        AppStrings.tr(context, ar: 'أسعار المقاطع المتوفرة', en: 'Segment prices'),
+                        AppStrings.tr(
+                          context,
+                          ar: 'أسعار المقاطع المتوفرة',
+                          en: 'Segment prices',
+                        ),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -114,11 +119,21 @@ class TripDetailsScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  _buildSegmentRow(context, 'القاهرة ➔ طنطا', '60'),
-                  const Divider(height: 16),
-                  _buildSegmentRow(context, 'طنطا ➔ الإسكندرية', '70'),
-                  const Divider(height: 16),
-                  _buildSegmentRow(context, 'القاهرة ➔ الإسكندرية', '120', isFull: true),
+                  ...legs.map(
+                    (leg) => _buildSegmentRow(
+                      context,
+                      '${leg['from_city']} → ${leg['to_city']}',
+                      '${leg['price']}',
+                    ),
+                  ),
+                  ...fares.map(
+                    (fare) => _buildSegmentRow(
+                      context,
+                      '${fare['from_city']} → ${fare['to_city']} (direct fare)',
+                      '${fare['price']}',
+                      isFull: true,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -141,7 +156,7 @@ class TripDetailsScreen extends ConsumerWidget {
                     radius: 26,
                     backgroundColor: const Color(0xFF0F172A),
                     child: Text(
-                      driverName.substring(0, 1),
+                      driverName.isEmpty ? '?' : driverName.substring(0, 1),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -163,7 +178,11 @@ class TripDetailsScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)),
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: Color(0xFFF59E0B),
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '4.9 (142 ${AppStrings.tr(context, ar: "تقييم", en: "reviews")})',
@@ -178,7 +197,10 @@ class TripDetailsScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           carModel,
-                          style: TextStyle(fontSize: 12, color: theme.hintColor),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.hintColor,
+                          ),
                         ),
                       ],
                     ),
@@ -215,42 +237,24 @@ class TripDetailsScreen extends ConsumerWidget {
         child: SafeArea(
           child: Row(
             children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppStrings.perSeat(context),
-                    style: TextStyle(fontSize: 12, color: theme.hintColor),
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        '$price',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFFF59E0B),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        AppStrings.currency(context),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ],
+              const Expanded(
+                child: Text('Fare is calculated after you choose your stops'),
               ),
               const SizedBox(width: 20),
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    context.push('/passenger/book', extra: {
-                      'tripId': tripId,
-                      'driverName': driverName,
-                      'price': price,
-                    });
+                    context.push(
+                      '/passenger/book',
+                      extra: {
+                        ...?tripData,
+                        'id': tripId,
+                        'driverName': driverName,
+                        'carModel': carModel,
+                        'legs': legs,
+                        'fares': fares,
+                      },
+                    );
                   },
                   child: Text(AppStrings.bookNow(context)),
                 ),
@@ -274,8 +278,8 @@ class TripDetailsScreen extends ConsumerWidget {
     final dotColor = isStart
         ? const Color(0xFF10B981)
         : isEnd
-            ? const Color(0xFFEF4444)
-            : const Color(0xFFF59E0B);
+        ? const Color(0xFFEF4444)
+        : const Color(0xFFF59E0B);
 
     return IntrinsicHeight(
       child: Row(
@@ -340,7 +344,12 @@ class TripDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSegmentRow(BuildContext context, String route, String price, {bool isFull = false}) {
+  Widget _buildSegmentRow(
+    BuildContext context,
+    String route,
+    String price, {
+    bool isFull = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
