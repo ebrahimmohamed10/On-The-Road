@@ -174,31 +174,82 @@ class AppStrings {
   static String bookNow(BuildContext context) =>
       tr(context, ar: 'احجز مقعدك الآن', en: 'Book your seat now');
 
-  // Screen 13: Confirm Booking
+  // Screen 13: Confirm Booking / Seat Selection
   static String confirmBooking(BuildContext context) =>
       tr(context, ar: 'تأكيد الحجز', en: 'Confirm booking');
   static String selectSeats(BuildContext context) =>
       tr(context, ar: 'اختر المقاعد المطلوبة', en: 'Select your seats');
-  static String paymentMethod(BuildContext context) =>
-      tr(context, ar: 'طريقة الدفع', en: 'Payment method');
-  static String cashToDriver(BuildContext context) =>
-      tr(context, ar: 'نقداً للسائق عند الركوب', en: 'Cash to driver on pickup');
   static String totalAmount(BuildContext context) =>
       tr(context, ar: 'المبلغ الإجمالي', en: 'Total amount');
   static String confirmRequestBtn(BuildContext context) =>
       tr(context, ar: 'تأكيد وإرسال طلب الحجز', en: 'Confirm & send booking request');
+  static String proceedToPayment(BuildContext context) =>
+      tr(context, ar: 'المتابعة إلى الدفع', en: 'Proceed to payment');
 
-  // Screen 14: Booking Summary
-  static String bookingSuccess(BuildContext context) =>
-      tr(context, ar: 'تم إرسال طلب الحجز بنجاح!', en: 'Booking request sent successfully!');
-  static String bookingSuccessSub(BuildContext context) =>
-      tr(context, ar: 'تم إخطار السائق بطلبك وستتلقى إشعاراً فور قبوله.', en: 'The driver has been notified and you will receive an update once confirmed.');
-  static String bookingCode(BuildContext context) =>
-      tr(context, ar: 'رمز الحجز', en: 'Booking Reference');
-  static String contactDriver(BuildContext context) =>
-      tr(context, ar: 'محادثة السائق', en: 'Chat with driver');
+  // ==========================================================
+  // Screen 14: Payment / الدفع (matching Figma ar-payment & en-payment)
+  // ==========================================================
+  static String payment(BuildContext context) =>
+      tr(context, ar: 'الدفع', en: 'Payment');
+  static String paymentMethod(BuildContext context) =>
+      tr(context, ar: 'طريقة الدفع', en: 'Payment method');
+  static String cashToDriver(BuildContext context) =>
+      tr(context, ar: 'كاش للسائق', en: 'Cash to driver');
+  static String payWhenYouBoard(BuildContext context) =>
+      tr(context, ar: 'ادفع عند الركوب', en: 'Pay when you board');
+  static String vodafoneCash(BuildContext context) =>
+      tr(context, ar: 'فودافون كاش', en: 'Vodafone Cash');
+  static String bankCard(BuildContext context) =>
+      tr(context, ar: 'كارت بنكي', en: 'Bank card');
+  static String seatCalc(BuildContext context, int count, int price) =>
+      tr(context, ar: '$count مقعد × $price', en: '$count seat × $price');
+  static String serviceFee(BuildContext context) =>
+      tr(context, ar: 'رسوم الخدمة', en: 'Service fee');
+  static String total(BuildContext context) =>
+      tr(context, ar: 'الإجمالي', en: 'Total');
+  static String noHiddenFees(BuildContext context) =>
+      tr(context, ar: 'لا رسوم خفية', en: 'No hidden fees');
+  static String confirmAndSendRequest(BuildContext context) =>
+      tr(context, ar: 'تأكيد وإرسال الطلب', en: 'Confirm and send request');
 
-  // Screen 15: My Trips
+  // ==========================================================
+  // Screen 15: Booking Confirmation / تم إرسال طلبك
+  // (matching Figma ar-booking-confirm... & en-booking-confirm...)
+  // ==========================================================
+  static String requestSent(BuildContext context) =>
+      tr(context, ar: 'تم إرسال طلبك', en: 'Request sent');
+  static String bookingRequestSent(BuildContext context) =>
+      tr(context, ar: 'تم إرسال طلب الحجز', en: 'Booking request sent');
+  static String weWillNotifyDriver(BuildContext context) =>
+      tr(context, ar: 'هنبلغك أول ما السائق يرد على طلبك', en: "We'll notify you as soon as the driver responds");
+  static String waitingForDriver(BuildContext context) =>
+      tr(context, ar: 'في انتظار السائق', en: 'Waiting for driver');
+  static String ramsesStation(BuildContext context) =>
+      tr(context, ar: 'محطة رمسيس', en: 'Ramses Station');
+  static String sidiGaberStation(BuildContext context) =>
+      tr(context, ar: 'محطة سيدي جابر', en: 'Sidi Gaber Station');
+  static String yourDriverForTrip(BuildContext context) =>
+      tr(context, ar: 'سائقك لهذه الرحلة', en: 'Your driver for this trip');
+  static String seatCountLabel(BuildContext context, int count) =>
+      tr(context, ar: '$count مقعد', en: '$count seat');
+  static String bookingRef(BuildContext context, String code) =>
+      tr(context, ar: 'رقم الحجز: $code', en: 'Booking ref: $code');
+  static String viewMyTrips(BuildContext context) =>
+      tr(context, ar: 'عرض رحلاتي', en: 'View my trips');
+  static String backToHome(BuildContext context) =>
+      tr(context, ar: 'الرجوع للرئيسية', en: 'Back to home');
+
+  // Navigation Items
+  static String navHome(BuildContext context) =>
+      tr(context, ar: 'الرئيسية', en: 'Home');
+  static String navRides(BuildContext context) =>
+      tr(context, ar: 'رحلاتي', en: 'Rides');
+  static String navMessages(BuildContext context) =>
+      tr(context, ar: 'الرسائل', en: 'Messages');
+  static String navAccount(BuildContext context) =>
+      tr(context, ar: 'حسابي', en: 'Account');
+
+  // Screen: My Trips
   static String myTrips(BuildContext context) =>
       tr(context, ar: 'رحلاتي وحجوزاتي', en: 'My rides & bookings');
   static String upcoming(BuildContext context) =>

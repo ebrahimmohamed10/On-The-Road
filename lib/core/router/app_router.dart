@@ -17,7 +17,8 @@ import '../../features/trips/screens/search_trips_screen.dart';
 import '../../features/trips/screens/ride_results_screen.dart';
 import '../../features/trips/screens/trip_details_screen.dart';
 import '../../features/bookings/screens/seat_booking_screen.dart';
-import '../../features/bookings/screens/booking_summary_screen.dart';
+import '../../features/bookings/screens/payment_screen.dart';
+import '../../features/bookings/screens/booking_confirmation_screen.dart';
 import '../../features/bookings/screens/my_bookings_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
@@ -105,10 +106,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/passenger/payment',
+        builder: (_, state) {
+          final data = state.extra as Map<String, dynamic>?;
+          return PaymentScreen(paymentData: data);
+        },
+      ),
+      GoRoute(
+        path: '/passenger/booking-confirmation',
+        builder: (_, state) {
+          final data = state.extra as Map<String, dynamic>?;
+          return BookingConfirmationScreen(confirmationData: data);
+        },
+      ),
+      GoRoute(
         path: '/passenger/booking-summary',
         builder: (_, state) {
           final data = state.extra as Map<String, dynamic>?;
-          return BookingSummaryScreen(summaryData: data);
+          return BookingConfirmationScreen(confirmationData: data);
         },
       ),
       GoRoute(path: '/passenger/bookings', builder: (_, _) => const MyBookingsScreen()),

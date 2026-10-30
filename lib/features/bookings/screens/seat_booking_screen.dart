@@ -31,27 +31,18 @@ class _SeatBookingScreenState extends ConsumerState<SeatBookingScreen> {
     });
   }
 
-  Future<void> _confirmBooking() async {
-    setState(() => _isLoading = true);
-    final tripId = widget.bookingData?['tripId'] ?? 'trip-1';
-    final totalPrice = (_selectedSeats.length * (widget.bookingData?['price'] ?? 120)).toDouble();
+  void _goToPayment() {
+    final tripId = widget.bookingData?['tripId'] ?? 'aaaa1111-1111-1111-1111-111111111111';
+    final price = widget.bookingData?['price'] ?? 180;
+    final driverName = widget.bookingData?['driverName'] ?? 'أحمد حسن';
 
-    // استدعاء خدمة الحجز الحقيقية في Supabase
-    final service = ref.read(tripServiceProvider);
-    await service.createBooking(
-      tripId: tripId,
-      pickupCity: 'القاهرة',
-      dropoffCity: 'الإسكندرية',
-      seatsBooked: _selectedSeats.length,
-      totalPrice: totalPrice,
-    );
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    context.go('/passenger/booking-summary', extra: {
+    context.push('/passenger/payment', extra: {
+      'tripId': tripId,
       'seatsCount': _selectedSeats.length,
-      'driverName': widget.bookingData?['driverName'] ?? 'محمود السيد',
-      'totalPrice': totalPrice.toInt(),
+      'driverName': driverName,
+      'price': price,
+      'from': 'القاهرة',
+      'to': 'الإسكندرية',
     });
   }
 
@@ -288,19 +279,10 @@ class _SeatBookingScreenState extends ConsumerState<SeatBookingScreen> {
 
             const SizedBox(height: 28),
 
-            // زر تأكيد وإرسال طلب الحجز
+            // زر المتابعة إلى الدفع
             ElevatedButton(
-              onPressed: _isLoading ? null : _confirmBooking,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : Text(AppStrings.confirmRequestBtn(context)),
+              onPressed: _goToPayment,
+              child: Text(AppStrings.proceedToPayment(context)),
             ),
 
             const SizedBox(height: 20),

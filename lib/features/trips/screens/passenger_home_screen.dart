@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
+import '../../../shared/widgets/app_bottom_nav.dart';
 
 class PassengerHomeScreen extends ConsumerWidget {
   const PassengerHomeScreen({super.key});
@@ -221,30 +222,7 @@ class PassengerHomeScreen extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home_rounded),
-            label: AppStrings.tr(context, ar: 'الرئيسية', en: 'Home'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.bookmark_border_rounded),
-            selectedIcon: const Icon(Icons.bookmark_rounded),
-            label: AppStrings.myTrips(context),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
-            label: AppStrings.profile(context),
-          ),
-        ],
-        onDestinationSelected: (index) {
-          if (index == 1) context.go('/passenger/bookings');
-          if (index == 2) context.go('/passenger/profile');
-        },
-      ),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 0),
     );
   }
 }
