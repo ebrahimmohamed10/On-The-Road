@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -72,15 +73,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           'role': role,
         },
       );
-    } catch (_) {
+    } catch (error) {
+      final diagnostic = error.toString().replaceAll(phone, '[phone]');
+      debugPrint('Phone OTP request failed: $diagnostic');
       if (mounted) {
-        _showError(
-          AppStrings.tr(
-            context,
-            ar: 'تعذر إرسال رمز التحقق. تحقق من الرقم وإعدادات Supabase ثم حاول مجددًا.',
-            en: 'Could not send the verification code. Check the phone number and Supabase setup, then try again.',
-          ),
+        final message = AppStrings.tr(
+          context,
+          ar: 'تعذر إرسال رمز التحقق. تحقق من الرقم وإعدادات Supabase ثم حاول مجددًا.',
+          en: 'Could not send the verification code. Check the phone number and Supabase setup, then try again.',
         );
+        _showError(kDebugMode ? '$message\n$diagnostic' : message);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
