@@ -31,7 +31,11 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/android/build/
 /coverage/
+
+# Local Supabase CLI state and generated temporary files
+/supabase/.temp/
 
 # Symbolication related
 app.*.symbols

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/locale_provider.dart';
@@ -8,6 +9,57 @@ import '../../../core/theme/theme_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  Future<void> _requestAccountDeletion(BuildContext context) async {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(isArabic ? 'طلب حذف الحساب' : 'Request account deletion'),
+        content: Text(
+          isArabic
+              ? 'سيُرسل طلبك للمراجعة. لن يُحذف الحساب فورًا.'
+              : 'Your request will be submitted for review. Your account will not be deleted immediately.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(isArabic ? 'رجوع' : 'Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(isArabic ? 'إرسال الطلب' : 'Submit request'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await Supabase.instance.client.rpc('request_account_deletion');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isArabic
+                ? 'تم إرسال طلب حذف الحساب للمراجعة.'
+                : 'Your account deletion request was submitted for review.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isArabic
+                ? 'تعذر إرسال الطلب. حاول مرة أخرى.'
+                : 'Could not submit the request. Please try again.',
+          ),
+        ),
+      );
+    }
+  }
 
   Widget _buildTile(
     BuildContext context, {
@@ -233,13 +285,35 @@ class ProfileScreen extends ConsumerWidget {
 
             _buildTile(
               context,
+              icon: Icons.delete_outline_rounded,
+              title: AppStrings.tr(
+                context,
+                ar: 'طلب حذف الحساب',
+                en: 'Request account deletion',
+              ),
+              iconColor: const Color(0xFFEF4444),
+              textColor: const Color(0xFFEF4444),
+              onTap: () => _requestAccountDeletion(context),
+            ),
+
+            _buildTile(
+              context,
               icon: Icons.logout_rounded,
               title: AppStrings.logout(context),
               iconColor: const Color(0xFFEF4444),
               textColor: const Color(0xFFEF4444),
               trailing: const SizedBox.shrink(),
-              onTap: () {
-                context.go('/welcome');
+              onTap: () async {
+                try {
+                  await Supabase.instance.client.auth.signOut();
+                  if (context.mounted) context.go('/welcome');
+                } on AuthException catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(error.message)),
+                    );
+                  }
+                }
               },
             ),
 

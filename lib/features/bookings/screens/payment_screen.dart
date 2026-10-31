@@ -59,7 +59,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         seatsBooked: seatsCount,
       );
       if (!mounted) return;
-      final totalPrice = (booking['total_price'] as num).toDouble();
+      final totalPriceMinor = (booking['total_price_minor'] as num).toInt();
+      final totalPrice = totalPriceMinor / 100;
       setState(() => _isLoading = false);
       context.go(
         '/passenger/booking-confirmation',

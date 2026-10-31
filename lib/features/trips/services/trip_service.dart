@@ -11,9 +11,11 @@ final availableTripsProvider =
       filters,
     ) async {
       final service = ref.watch(tripServiceProvider);
-      return service.getTrips(
-        fromCity: filters['from'] as String?,
-        toCity: filters['to'] as String?,
+      return service.searchTrips(
+        originCityId: filters['fromCityId'] as String,
+        destinationCityId: filters['toCityId'] as String,
+        date: filters['date'] as DateTime,
+        seats: filters['seats'] as int,
       );
     });
 
@@ -23,30 +25,55 @@ class TripService {
 
   User? get currentUser => _client.auth.currentUser;
 
-  /// جلب الرحلات الحية من سيرفر Supabase مع بيانات السائق والمقاطع
-  Future<List<Map<String, dynamic>>> getTrips({
-    String? fromCity,
-    String? toCity,
+  Future<List<Map<String, dynamic>>> getActiveCities() async {
+    final rows = await _client
+        .from('cities')
+        .select('id, code, name_ar, name_en')
+        .eq('is_active', true)
+        .order('name_en');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// Search by approved city stops, date range, and seat count in the database.
+  Future<List<Map<String, dynamic>>> searchTrips({
+    required String originCityId,
+    required String destinationCityId,
+    required DateTime date,
+    required int seats,
   }) async {
     try {
-      var query = _client
-          .from('trips')
-          .select('*, segments:trip_segments(*)')
-          .eq('status', 'upcoming');
-
-      if (fromCity != null && fromCity.isNotEmpty) {
-        query = query.eq('origin_city', fromCity);
-      }
-      if (toCity != null && toCity.isNotEmpty) {
-        query = query.eq('destination_city', toCity);
-      }
-
-      final trips = List<Map<String, dynamic>>.from(
-        await query.order('departure_time', ascending: true),
+      final startLocal = DateTime(date.year, date.month, date.day);
+      final endLocal = startLocal.add(const Duration(days: 1));
+      final matches = await _client.rpc(
+        'search_trips',
+        params: {
+          'p_origin_city_id': originCityId,
+          'p_destination_city_id': destinationCityId,
+          'p_from': startLocal.toUtc().toIso8601String(),
+          'p_to': endLocal.toUtc().toIso8601String(),
+          'p_seats': seats,
+        },
       );
-      if (trips.isEmpty) return trips;
+      final summaries = List<Map<String, dynamic>>.from(matches as List);
+      if (summaries.isEmpty) return const [];
 
-      final driverIds = trips
+      final tripIds = summaries
+          .map((row) => row['trip_id'] as String)
+          .toList(growable: false);
+      final trips = await _client
+          .from('trips')
+          .select(
+            '*, segments:trip_segments(*), '
+            'stops:trip_stops(*, city:cities!trip_stops_city_fkey(*), '
+            'stop:approved_stops!trip_stops_approved_stop_city_fkey(*)), '
+            'fares:trip_fares(*)',
+          )
+          .eq('status', 'published')
+          .inFilter('id', tripIds);
+      final tripRows = List<Map<String, dynamic>>.from(trips);
+      if (tripRows.isEmpty) return const [];
+
+      final driverIds = tripRows
           .map((trip) => trip['driver_id'] as String)
           .toSet()
           .toList();
@@ -59,12 +86,24 @@ class TripService {
       final driversById = {
         for (final driver in drivers) driver['id'] as String: driver,
       };
+      final tripsById = {
+        for (final trip in tripRows) trip['id'] as String: trip,
+      };
 
-      return trips.map((trip) {
-        return {...trip, 'driver': driversById[trip['driver_id']]};
-      }).toList();
+      return summaries
+          .where((summary) => tripsById.containsKey(summary['trip_id']))
+          .map((summary) {
+            final trip = tripsById[summary['trip_id']]!;
+            return {
+              ...trip,
+              'driver': driversById[trip['driver_id']],
+              'search_seats_available': summary['seats_available'],
+              'search_price_minor': summary['price_minor'],
+            };
+          })
+          .toList(growable: false);
     } catch (e) {
-      // في حال حدوث خطأ أو عدم وجود شبكة، يُرجع قائمة فارغة
+      // Preserve the existing empty-state behavior for the results screen.
       return [];
     }
   }

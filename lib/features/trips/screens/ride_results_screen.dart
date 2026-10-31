@@ -26,16 +26,28 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
   }
 
   Future<void> _fetchLiveTrips() async {
-    final fromCity = widget.searchParams?['from'] as String?;
-    final toCity = widget.searchParams?['to'] as String?;
     final service = ref.read(tripServiceProvider);
-    final results = await service.getTrips(fromCity: fromCity, toCity: toCity);
+    final params = widget.searchParams;
+    if (params == null ||
+        params['fromCityId'] is! String ||
+        params['toCityId'] is! String ||
+        params['date'] is! DateTime ||
+        params['seats'] is! int) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    final results = await service.searchTrips(
+      originCityId: params['fromCityId'] as String,
+      destinationCityId: params['toCityId'] as String,
+      date: params['date'] as DateTime,
+      seats: params['seats'] as int,
+    );
 
     if (!mounted) return;
     setState(() {
       _liveTrips = results.map((trip) {
         final driver = trip['driver'] as Map<String, dynamic>?;
-        final segments =
+        final rawSegments =
             List<Map<String, dynamic>>.from(
               ((trip['segments'] as List?) ?? []).map(
                 (segment) => Map<String, dynamic>.from(segment),
@@ -45,8 +57,63 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                 b['segment_order'] as num,
               ),
             );
-        final legs = segments
-            .where((segment) => segment['segment_kind'] == 'leg')
+        final stops =
+            List<Map<String, dynamic>>.from(
+              ((trip['stops'] as List?) ?? []).map(
+                (stop) => Map<String, dynamic>.from(stop),
+              ),
+            )..sort(
+              (a, b) =>
+                  (a['stop_order'] as num).compareTo(b['stop_order'] as num),
+            );
+        final fares = List<Map<String, dynamic>>.from(
+          ((trip['fares'] as List?) ?? []).map(
+            (fare) => Map<String, dynamic>.from(fare),
+          ),
+        );
+        String cityForStop(dynamic stopId) {
+          Map<String, dynamic>? stop;
+          for (final item in stops) {
+            if (item['id'] == stopId) {
+              stop = item;
+              break;
+            }
+          }
+          final city = stop?['city'];
+          if (city is Map) {
+            return (city['name_ar'] ?? city['name_en'] ?? '').toString();
+          }
+          return '';
+        }
+
+        final legs = rawSegments.map((segment) {
+          final legFare = fares.where(
+            (fare) =>
+                fare['fare_type'] == 'segment' &&
+                fare['trip_segment_id'] == segment['id'],
+          );
+          final priceMinor = legFare.isEmpty
+              ? 0
+              : (legFare.first['price_minor'] as num).toInt();
+          return {
+            ...segment,
+            'from_city': cityForStop(segment['from_stop_id']),
+            'to_city': cityForStop(segment['to_stop_id']),
+            'price_minor': priceMinor,
+            'price': (priceMinor / 100).toStringAsFixed(2),
+          };
+        }).toList();
+        final overrides = fares
+            .where((fare) => fare['fare_type'] == 'override')
+            .map(
+              (fare) => {
+                ...fare,
+                'from_city': cityForStop(fare['from_stop_id']),
+                'to_city': cityForStop(fare['to_stop_id']),
+                'price': (((fare['price_minor'] as num?)?.toInt() ?? 0) / 100)
+                    .toStringAsFixed(2),
+              },
+            )
             .toList();
         return {
           ...trip,
@@ -55,18 +122,14 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
           'driverRating': (driver?['rating'] as num?)?.toDouble() ?? 0,
           'tripsCount': driver?['trips_count'] ?? 0,
           'carModel': driver?['car_model'] ?? '',
-          'availableSeats': trip['total_seats'],
+          'availableSeats': trip['search_seats_available'] ?? 0,
+          'searchPriceMinor': trip['search_price_minor'],
           'departureTime': trip['departure_time']?.toString() ?? '',
           'arrivalTime': trip['arrival_time']?.toString() ?? '',
-          'segments': segments,
+          'segments': rawSegments,
           'legs': legs,
-          'fares': segments
-              .where((segment) => segment['segment_kind'] == 'fare_override')
-              .toList(),
-          'waypoints': [
-            if (legs.isNotEmpty) legs.first['from_city'],
-            ...legs.map((segment) => segment['to_city']),
-          ],
+          'fares': overrides,
+          'waypoints': stops.map((stop) => cityForStop(stop['id'])).toList(),
         };
       }).toList();
       _isLoading = false;
@@ -171,6 +234,10 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
 
   Widget _buildTripCard(Map<String, dynamic> trip, ThemeData theme) {
     final waypoints = (trip['waypoints'] as List).join(' ➔ ');
+    final searchPriceMinor = (trip['searchPriceMinor'] as num?)?.toInt();
+    final displayedFare = searchPriceMinor == null
+        ? 'Choose stops to see fare'
+        : '${searchPriceMinor ~/ 100}.${(searchPriceMinor % 100).toString().padLeft(2, '0')} EGP';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -224,9 +291,9 @@ class _RideResultsScreenState extends ConsumerState<RideResultsScreen> {
                       ),
                     ],
                   ),
-                  const Text(
-                    'Choose stops to see fare',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  Text(
+                    displayedFare,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ],
               ),

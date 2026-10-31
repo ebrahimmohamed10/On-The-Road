@@ -1,14 +1,21 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
+import 'in_app_camera_screen.dart';
+import '../services/egyptian_id_ocr.dart';
 
 class PersonalDetailsScreen extends ConsumerStatefulWidget {
-  const PersonalDetailsScreen({super.key});
+  const PersonalDetailsScreen({super.key, required this.role});
+
+  final String role;
 
   @override
-  ConsumerState<PersonalDetailsScreen> createState() => _PersonalDetailsScreenState();
+  ConsumerState<PersonalDetailsScreen> createState() =>
+      _PersonalDetailsScreenState();
 }
 
 class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
@@ -16,6 +23,71 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
   final TextEditingController _dobController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   String _selectedGender = 'male';
+  XFile? _idFrontPhoto;
+  String? _recognizedText;
+  String? _ocrNationalId;
+  bool _readingId = false;
+
+  Future<void> _scanIdFront() async {
+    final photo = await Navigator.of(context).push<XFile>(
+      MaterialPageRoute(
+        builder: (_) => InAppCameraScreen(title: AppStrings.idFront(context)),
+      ),
+    );
+    if (photo == null || !mounted) return;
+    setState(() {
+      _idFrontPhoto = photo;
+      _readingId = true;
+      _recognizedText = null;
+    });
+    try {
+      final result = await EgyptianIdOcr.readFront(photo.path);
+      if (!mounted) return;
+      setState(() {
+        _recognizedText = result.rawText;
+        _ocrNationalId = result.nationalId;
+        if (result.nationalId != null) {
+          _idController.text = result.nationalId!;
+        }
+        final birthDate = _birthDateFromNationalId(result.nationalId);
+        if (birthDate != null) {
+          _dobController.text =
+              '${birthDate.day}/${birthDate.month}/${birthDate.year}';
+        }
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _recognizedText =
+              'تعذرت قراءة البطاقة. راجع البيانات يدويًا أو أعد التصوير.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _readingId = false);
+    }
+  }
+
+  DateTime? _birthDateFromNationalId(String? id) {
+    if (id == null || id.length != 14) return null;
+    final century = id[0] == '2'
+        ? 1900
+        : id[0] == '3'
+        ? 2000
+        : null;
+    if (century == null) return null;
+    final year = century + int.parse(id.substring(1, 3));
+    final month = int.parse(id.substring(3, 5));
+    final day = int.parse(id.substring(5, 7));
+    final date = DateTime.tryParse(
+      '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}',
+    );
+    return date != null &&
+            date.year == year &&
+            date.month == month &&
+            date.day == day
+        ? date
+        : null;
+  }
 
   @override
   void dispose() {
@@ -26,7 +98,54 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
   }
 
   void _onSaveAndContinue() {
-    context.push('/verification/identity');
+    final nationalId = _idController.text.trim();
+    final dateParts = _dobController.text.split('/');
+    if (!RegExp(r'^\d{14}$').hasMatch(nationalId) || dateParts.length != 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'أدخل الرقم القومي المكوّن من 14 رقمًا وتاريخ الميلاد.',
+          ),
+        ),
+      );
+      return;
+    }
+    final dateOfBirth = DateTime.tryParse(
+      '${dateParts[2]}-${dateParts[1].padLeft(2, '0')}-${dateParts[0].padLeft(2, '0')}',
+    );
+    if (_ocrNationalId != null && _ocrNationalId != nationalId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'الرقم المدخل لا يطابق الرقم المقروء من البطاقة. راجعه أو أعد التصوير.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (dateOfBirth == null || !dateOfBirth.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تاريخ الميلاد غير صحيح.')));
+      return;
+    }
+    if (_idFrontPhoto == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('صوّر الوجه الأمامي للبطاقة بالكاميرا أولًا.'),
+        ),
+      );
+      return;
+    }
+    context.push(
+      '/verification/identity',
+      extra: {
+        'role': widget.role,
+        'nationalId': nationalId,
+        'dateOfBirth': dateOfBirth.toIso8601String(),
+        'idFrontPath': _idFrontPhoto!.path,
+      },
+    );
   }
 
   @override
@@ -68,6 +187,27 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
               const SizedBox(height: 32),
 
               // حقل الرقم القومي
+              OutlinedButton.icon(
+                onPressed: _readingId ? null : _scanIdFront,
+                icon: const Icon(Icons.camera_alt),
+                label: Text(
+                  _idFrontPhoto == null
+                      ? 'صوّر البطاقة لقراءة بياناتها'
+                      : 'إعادة تصوير البطاقة',
+                ),
+              ),
+              if (_readingId) const LinearProgressIndicator(),
+              if (_recognizedText != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'النص المقروء من البطاقة:\n$_recognizedText',
+                    textDirection: TextDirection.rtl,
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              const SizedBox(height: 16),
               Text(
                 AppStrings.nationalId(context),
                 style: theme.textTheme.titleMedium?.copyWith(
@@ -111,12 +251,17 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
                   );
                   if (picked != null) {
                     setState(() {
-                      _dobController.text = '${picked.day}/${picked.month}/${picked.year}';
+                      _dobController.text =
+                          '${picked.day}/${picked.month}/${picked.year}';
                     });
                   }
                 },
                 decoration: InputDecoration(
-                  hintText: AppStrings.tr(context, ar: 'يوم / شهر / سنة', en: 'DD / MM / YYYY'),
+                  hintText: AppStrings.tr(
+                    context,
+                    ar: 'يوم / شهر / سنة',
+                    en: 'DD / MM / YYYY',
+                  ),
                   prefixIcon: const Icon(Icons.calendar_today_rounded),
                 ),
               ),
@@ -173,7 +318,8 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
                           width: 1.5,
                         ),
                       ),
-                      onPressed: () => setState(() => _selectedGender = 'female'),
+                      onPressed: () =>
+                          setState(() => _selectedGender = 'female'),
                       child: Text(
                         AppStrings.female(context),
                         style: TextStyle(
@@ -202,7 +348,11 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
               TextFormField(
                 controller: _cityController,
                 decoration: InputDecoration(
-                  hintText: AppStrings.tr(context, ar: 'القاهرة، الجيزة، الإسكندرية...', en: 'Cairo, Giza, Alexandria...'),
+                  hintText: AppStrings.tr(
+                    context,
+                    ar: 'القاهرة، الجيزة، الإسكندرية...',
+                    en: 'Cairo, Giza, Alexandria...',
+                  ),
                   prefixIcon: const Icon(Icons.location_city_rounded),
                 ),
               ),
@@ -222,4 +372,3 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
     );
   }
 }
-

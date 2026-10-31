@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
+import '../services/trip_service.dart';
 
 class SearchTripsScreen extends ConsumerStatefulWidget {
   const SearchTripsScreen({super.key});
@@ -12,21 +14,66 @@ class SearchTripsScreen extends ConsumerStatefulWidget {
 }
 
 class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
-  String _fromCity = 'القاهرة';
-  String _toCity = 'الإسكندرية';
   DateTime _selectedDate = DateTime.now();
   int _seatsCount = 1;
+  List<Map<String, dynamic>> _cities = [];
+  Map<String, dynamic>? _fromCity;
+  Map<String, dynamic>? _toCity;
+  bool _loadingCities = true;
+  String? _cityLoadError;
 
-  final List<String> _cities = [
-    'القاهرة',
-    'الإسكندرية',
-    'طنطا',
-    'المنصورة',
-    'الإسماعيلية',
-    'السويس',
-    'بنها',
-    'دمنهور',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadCities();
+  }
+
+  Future<void> _loadCities() async {
+    try {
+      final cities = await ref.read(tripServiceProvider).getActiveCities();
+      if (!mounted) return;
+      setState(() {
+        _cities = cities;
+        _fromCity =
+            _findCityByLabel(cities, 'القاهرة', 'Cairo') ??
+            (cities.isNotEmpty ? cities.first : null);
+        _toCity =
+            _findCityByLabel(cities, 'الإسكندرية', 'Alexandria') ??
+            (cities.length > 1 ? cities[1] : null);
+        _loadingCities = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingCities = false;
+        _cityLoadError = AppStrings.tr(
+          context,
+          ar: 'تعذر تحميل المدن المعتمدة. تحقق من الاتصال وحاول مجددًا.',
+          en: 'Could not load approved cities. Check your connection and retry.',
+        );
+      });
+    }
+  }
+
+  Map<String, dynamic>? _findCityByLabel(
+    List<Map<String, dynamic>> cities,
+    String arabic,
+    String english,
+  ) {
+    for (final city in cities) {
+      if (city['name_ar'] == arabic || city['name_en'] == english) return city;
+    }
+    return null;
+  }
+
+  String _cityLabel(Map<String, dynamic>? city, BuildContext context) {
+    if (city == null) return '';
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    return (isArabic
+            ? city['name_ar'] ?? city['name_en']
+            : city['name_en'] ?? city['name_ar'])
+        .toString();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,12 +126,16 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                       onTap: () {
                         _showCityPicker(
                           title: AppStrings.fromCity(context),
-                          onSelected: (c) => setState(() => _fromCity = c),
+                          onSelected: (city) =>
+                              setState(() => _fromCity = city),
                         );
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
@@ -94,7 +145,11 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.trip_origin_rounded, color: Color(0xFF10B981), size: 22),
+                            const Icon(
+                              Icons.trip_origin_rounded,
+                              color: Color(0xFF10B981),
+                              size: 22,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -109,15 +164,17 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    _fromCity,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    _cityLabel(_fromCity, context),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
                             ),
-                            Icon(Icons.keyboard_arrow_down_rounded, color: theme.hintColor),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: theme.hintColor,
+                            ),
                           ],
                         ),
                       ),
@@ -130,12 +187,15 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                       onTap: () {
                         _showCityPicker(
                           title: AppStrings.toCity(context),
-                          onSelected: (c) => setState(() => _toCity = c),
+                          onSelected: (city) => setState(() => _toCity = city),
                         );
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
@@ -145,7 +205,11 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 22),
+                            const Icon(
+                              Icons.location_on_rounded,
+                              color: Color(0xFFEF4444),
+                              size: 22,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -160,15 +224,17 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    _toCity,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    _cityLabel(_toCity, context),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
                             ),
-                            Icon(Icons.keyboard_arrow_down_rounded, color: theme.hintColor),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: theme.hintColor,
+                            ),
                           ],
                         ),
                       ),
@@ -187,7 +253,9 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                                 context: context,
                                 initialDate: _selectedDate,
                                 firstDate: DateTime.now(),
-                                lastDate: DateTime.now().add(const Duration(days: 30)),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 30),
+                                ),
                               );
                               if (picked != null) {
                                 setState(() => _selectedDate = picked);
@@ -195,12 +263,17 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                             },
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 14,
+                              ),
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.surface,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: theme.dividerColor.withValues(alpha: 0.15),
+                                  color: theme.dividerColor.withValues(
+                                    alpha: 0.15,
+                                  ),
                                 ),
                               ),
                               child: Column(
@@ -216,9 +289,8 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     '${_selectedDate.day}/${_selectedDate.month}',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -231,12 +303,17 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                         // عدد المقاعد
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surface,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: theme.dividerColor.withValues(alpha: 0.15),
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.15,
+                                ),
                               ),
                             ),
                             child: Column(
@@ -250,26 +327,34 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                                   ),
                                 ),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     IconButton(
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
-                                      icon: const Icon(Icons.remove_circle_outline_rounded, size: 22),
+                                      icon: const Icon(
+                                        Icons.remove_circle_outline_rounded,
+                                        size: 22,
+                                      ),
                                       onPressed: _seatsCount > 1
                                           ? () => setState(() => _seatsCount--)
                                           : null,
                                     ),
                                     Text(
                                       '$_seatsCount',
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                     IconButton(
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
-                                      icon: const Icon(Icons.add_circle_outline_rounded, size: 22),
+                                      icon: const Icon(
+                                        Icons.add_circle_outline_rounded,
+                                        size: 22,
+                                      ),
                                       onPressed: _seatsCount < 4
                                           ? () => setState(() => _seatsCount++)
                                           : null,
@@ -287,22 +372,41 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
 
                     // زر البحث
                     ElevatedButton.icon(
-                      onPressed: () {
-                        context.push(
-                          '/passenger/results',
-                          extra: {
-                            'from': _fromCity,
-                            'to': _toCity,
-                            'seats': _seatsCount,
-                          },
-                        );
-                      },
+                      onPressed:
+                          _loadingCities ||
+                              _fromCity == null ||
+                              _toCity == null ||
+                              _fromCity!['id'] == _toCity!['id']
+                          ? null
+                          : () {
+                              context.push(
+                                '/passenger/results',
+                                extra: {
+                                  'from': _cityLabel(_fromCity, context),
+                                  'to': _cityLabel(_toCity, context),
+                                  'fromCityId': _fromCity!['id'],
+                                  'toCityId': _toCity!['id'],
+                                  'date': _selectedDate,
+                                  'seats': _seatsCount,
+                                },
+                              );
+                            },
                       icon: const Icon(Icons.search_rounded),
                       label: Text(AppStrings.searchRidesBtn(context)),
                     ),
                   ],
                 ),
               ),
+              if (_loadingCities)
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: LinearProgressIndicator(),
+                ),
+              if (_cityLoadError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(_cityLoadError!),
+                ),
             ],
           ),
         ),
@@ -310,7 +414,10 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
     );
   }
 
-  void _showCityPicker({required String title, required ValueChanged<String> onSelected}) {
+  void _showCityPicker({
+    required String title,
+    required ValueChanged<Map<String, dynamic>> onSelected,
+  }) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -325,18 +432,21 @@ class _SearchTripsScreenState extends ConsumerState<SearchTripsScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               const Divider(height: 1),
-              Expanded(
+              Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemCount: _cities.length,
                   itemBuilder: (context, index) {
                     final city = _cities[index];
                     return ListTile(
-                      title: Text(city),
+                      title: Text(_cityLabel(city, context)),
                       onTap: () {
                         onSelected(city);
                         Navigator.pop(context);

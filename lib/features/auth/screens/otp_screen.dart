@@ -59,7 +59,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             registration: widget.registration,
           );
       if (!mounted) return;
-      context.go('/passenger/home');
+      if (widget.registration) {
+        context.go(
+          '/verification/personal-details',
+          extra: {'role': widget.role ?? 'passenger'},
+        );
+      } else {
+        context.go('/passenger/home');
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

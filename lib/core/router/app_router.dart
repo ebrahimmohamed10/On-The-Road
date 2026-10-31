@@ -91,15 +91,37 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Verification Flow
       GoRoute(
         path: '/verification/personal-details',
-        builder: (_, _) => const PersonalDetailsScreen(),
+        builder: (_, state) {
+          final data = state.extra as Map<String, dynamic>? ?? const {};
+          return PersonalDetailsScreen(
+            role: data['role'] as String? ?? 'passenger',
+          );
+        },
       ),
       GoRoute(
         path: '/verification/identity',
-        builder: (_, _) => const IdentityVerificationScreen(),
+        builder: (_, state) {
+          final data = state.extra as Map<String, dynamic>? ?? const {};
+          return IdentityVerificationScreen(
+            role: data['role'] as String? ?? 'passenger',
+            nationalId: data['nationalId'] as String? ?? '',
+            dateOfBirth: data['dateOfBirth'] as String? ?? '',
+            idFrontPath: data['idFrontPath'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: '/verification/driver-docs',
-        builder: (_, _) => const DriverDocumentsScreen(),
+        builder: (_, state) {
+          final data = state.extra as Map<String, dynamic>? ?? const {};
+          return DriverDocumentsScreen(
+            role: data['role'] as String? ?? 'passenger',
+            nationalId: data['nationalId'] as String? ?? '',
+            dateOfBirth: data['dateOfBirth'] as String? ?? '',
+            selfiePath: data['selfiePath'] as String?,
+            idFrontPath: data['idFrontPath'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: '/verification/submitted',
