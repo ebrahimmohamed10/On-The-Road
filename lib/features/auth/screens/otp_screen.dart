@@ -51,12 +51,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await ref
+      final destination = await ref
           .read(authServiceProvider)
           .verifyPhoneOtp(
             phone: widget.phone,
             token: code,
             registration: widget.registration,
+            requestedRole: widget.role,
           );
       if (!mounted) return;
       if (widget.registration) {
@@ -65,7 +66,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           extra: {'role': widget.role ?? 'passenger'},
         );
       } else {
-        context.go('/passenger/home');
+        context.go(destination.location, extra: destination.extra);
       }
     } catch (_) {
       if (mounted) {

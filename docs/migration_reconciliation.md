@@ -9,7 +9,7 @@ separate test project. Production was queried read-only and was not changed.
 - Test Supabase: `yzsjzvirbbelfxxrncey` (`On The Road Test`).
 - Git branch: `codex/live-schema-reconciliation`.
 - Existing checkpoint: `47f3f94 chore: snapshot backend work and document migrations`.
-- No push to GitHub has been performed.
+- Repository delivery status is tracked by the Git branch and commit history.
 - Production cost metadata previously reported Free / $0 monthly quote. Confirm in
   the Supabase Billing UI if you need a billing guarantee.
 
@@ -129,3 +129,28 @@ No advisor-driven permissions or schema changes were made during the replay.
   the numeric value needs a separately reconciled migration.
 - Shared-trip public output was narrowed to a short display name and driver
   image, with no rider personal data.
+
+## 2026-11-14 test-only follow-up
+
+Migration `20261114153114_auth_provider_roles_and_vehicle_exterior_photos`
+was applied only to `On The Road Test`. It changes the auth-user trigger to
+store a requested `passenger` or `driver` app role on `profiles` for every
+provider, while continuing to grant only the baseline `rider` permission.
+The `set_requested_account_role(text)` RPC supports provider flows whose role
+is selected after OAuth sign-in. It cannot assign `admin`, `reviewer`, or the
+approved `driver` capability; existing reviewer approval remains the only path
+that grants `user_roles.driver`.
+
+The same migration adds front, right-side, and left-side exterior photo types
+to verification documents. Driver submissions must upload all three into the
+existing private `identity-documents` bucket. The database trigger verifies
+each object belongs to the signed-in user, stores its path in
+`verification_documents`, and clears the temporary path from
+`verification_requests`. The test project had no Auth users when this was
+applied, so the configured test OTP numbers need to be registered through the
+app before role assignment can be exercised.
+
+Production was not changed. The security advisor reports the new authenticated
+`set_requested_account_role` security-definer RPC as an additional generic
+warning; it is revoked from `anon` and validates `auth.uid()` and the permitted
+requested roles. Existing advisor findings remain separate.

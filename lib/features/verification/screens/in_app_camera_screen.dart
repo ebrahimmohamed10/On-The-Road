@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Camera-only capture screen. It intentionally exposes no gallery picker.
 class InAppCameraScreen extends StatefulWidget {
@@ -13,6 +16,9 @@ class InAppCameraScreen extends StatefulWidget {
 }
 
 class _InAppCameraScreenState extends State<InAppCameraScreen> {
+  static const _documentScanner = MethodChannel(
+    'com.ontheroad/document_scanner',
+  );
   CameraController? _controller;
   String? _error;
   bool _takingPicture = false;
@@ -24,6 +30,24 @@ class _InAppCameraScreenState extends State<InAppCameraScreen> {
   }
 
   Future<void> _initializeCamera() async {
+    if (Platform.isAndroid && !widget.front) {
+      try {
+        final path = await _documentScanner.invokeMethod<String>(
+          'captureDocument',
+        );
+        if (mounted) {
+          Navigator.of(context).pop<XFile>(path == null ? null : XFile(path));
+        }
+      } on PlatformException catch (error) {
+        if (mounted) {
+          setState(() => _error = error.message ?? 'Document scan failed.');
+        }
+      } catch (error) {
+        if (mounted) setState(() => _error = error.toString());
+      }
+      return;
+    }
+
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {

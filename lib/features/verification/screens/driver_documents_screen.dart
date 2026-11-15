@@ -15,14 +15,26 @@ class DriverDocumentsScreen extends ConsumerStatefulWidget {
     required this.role,
     required this.nationalId,
     required this.dateOfBirth,
-    required this.selfiePath,
+    required this.gender,
+    required this.city,
+    required this.faceFrontPath,
+    required this.faceRightPath,
+    required this.faceLeftPath,
+    required this.poseChallengeCompletedAt,
     required this.idFrontPath,
+    this.documentPaths = const {},
   });
   final String role;
   final String nationalId;
   final String dateOfBirth;
-  final String? selfiePath;
+  final String gender;
+  final String city;
+  final String? faceFrontPath;
+  final String? faceRightPath;
+  final String? faceLeftPath;
+  final DateTime? poseChallengeCompletedAt;
   final String? idFrontPath;
+  final Map<String, String> documentPaths;
 
   @override
   ConsumerState<DriverDocumentsScreen> createState() =>
@@ -34,6 +46,9 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
   XFile? _idBack;
   XFile? _licenseFront;
   XFile? _licenseBack;
+  XFile? _vehicleFront;
+  XFile? _vehicleRight;
+  XFile? _vehicleLeft;
   bool _isLoading = false;
   bool _ocrLoading = false;
   EgyptianIdOcrResult? _ocrResult;
@@ -43,7 +58,16 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
   void initState() {
     super.initState();
     final idFrontPath = widget.idFrontPath;
-    if (idFrontPath != null) _idFront = XFile(idFrontPath);
+    final docs = widget.documentPaths;
+    final resolvedIdFront = idFrontPath ?? docs['national_id_front'];
+    if (resolvedIdFront != null) _idFront = XFile(resolvedIdFront);
+    if (docs['national_id_back'] case final path?) _idBack = XFile(path);
+    if (docs['driver_license_front'] case final path?) {
+      _licenseFront = XFile(path);
+    }
+    if (docs['driver_license_back'] case final path?) {
+      _licenseBack = XFile(path);
+    }
   }
 
   Future<void> _capture(
@@ -51,12 +75,28 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
     String title, {
     bool readId = false,
   }) async {
+    if (!mounted) return;
     final image = await Navigator.of(context).push<XFile>(
       MaterialPageRoute(builder: (_) => InAppCameraScreen(title: title)),
     );
     if (image == null || !mounted) return;
+    try {
+      if (image.path.isEmpty) throw StateError('scanner returned no image');
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'تعذر فتح الصورة أو تعديلها. تحقق من الأذونات ثم حاول مجددًا.\n$error',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    final selectedImage = image;
     setState(() {
-      save(image);
+      save(selectedImage);
       if (readId) {
         _ocrLoading = true;
         _ocrResult = null;
@@ -65,7 +105,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
     });
     if (readId) {
       try {
-        final result = await EgyptianIdOcr.readFront(image.path);
+        final result = await EgyptianIdOcr.readFront(selectedImage.path);
         if (mounted) setState(() => _ocrResult = result);
       } catch (error) {
         if (mounted) setState(() => _ocrError = error.toString());
@@ -78,12 +118,21 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
   Future<void> _submit() async {
     if (_idFront == null ||
         _idBack == null ||
-        widget.selfiePath == null ||
+        widget.faceFrontPath == null ||
+        widget.faceRightPath == null ||
+        widget.faceLeftPath == null ||
+        widget.poseChallengeCompletedAt == null ||
         (widget.role == 'driver' &&
-            (_licenseFront == null || _licenseBack == null))) {
+            (_licenseFront == null ||
+                _licenseBack == null ||
+                _vehicleFront == null ||
+                _vehicleRight == null ||
+                _vehicleLeft == null))) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('التقط صور البطاقة والسيلفي، وصور وجهي الرخصة للسائق.'),
+          content: Text(
+            'التقط صور البطاقة وزوايا الوجه الثلاثة، وصور وجهي الرخصة وجوانب السيارة الثلاثة للسائق.',
+          ),
         ),
       );
       return;
@@ -96,11 +145,19 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
             role: widget.role,
             nationalId: widget.nationalId,
             dateOfBirth: DateTime.parse(widget.dateOfBirth),
+            gender: widget.gender,
+            city: widget.city,
             idFront: _idFront!,
             idBack: _idBack!,
-            selfie: XFile(widget.selfiePath!),
+            faceFront: XFile(widget.faceFrontPath!),
+            faceRight: XFile(widget.faceRightPath!),
+            faceLeft: XFile(widget.faceLeftPath!),
+            poseChallengeCompletedAt: widget.poseChallengeCompletedAt!,
             licenseFront: _licenseFront,
             licenseBack: _licenseBack,
+            vehicleFront: _vehicleFront,
+            vehicleRight: _vehicleRight,
+            vehicleLeft: _vehicleLeft,
           );
       if (mounted) context.go('/verification/submitted');
     } catch (error) {
@@ -223,7 +280,13 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                AppStrings.driverDocs(context),
+                widget.role == 'driver'
+                    ? AppStrings.driverDocs(context)
+                    : AppStrings.tr(
+                        context,
+                        ar: 'وثائق الهوية',
+                        en: 'Identity documents',
+                      ),
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 26,
@@ -231,7 +294,13 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                AppStrings.driverDocsSub(context),
+                widget.role == 'driver'
+                    ? AppStrings.driverDocsSub(context)
+                    : AppStrings.tr(
+                        context,
+                        ar: 'ارفع صورًا واضحة لوجهي بطاقة الرقم القومي.',
+                        en: 'Capture clear images of both sides of your national ID.',
+                      ),
                 style: theme.textTheme.bodyMedium,
               ),
 
@@ -312,6 +381,57 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                   onTap: () => _capture(
                     (image) => _licenseBack = image,
                     AppStrings.drivingLicense(context),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildUploadCard(
+                  title: AppStrings.tr(
+                    context,
+                    ar: 'صورة السيارة من الأمام',
+                    en: 'Vehicle front',
+                  ),
+                  isUploaded: _vehicleFront != null,
+                  onTap: () => _capture(
+                    (image) => _vehicleFront = image,
+                    AppStrings.tr(
+                      context,
+                      ar: 'صورة السيارة من الأمام',
+                      en: 'Vehicle front',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildUploadCard(
+                  title: AppStrings.tr(
+                    context,
+                    ar: 'الجانب الأيمن للسيارة',
+                    en: 'Vehicle right side',
+                  ),
+                  isUploaded: _vehicleRight != null,
+                  onTap: () => _capture(
+                    (image) => _vehicleRight = image,
+                    AppStrings.tr(
+                      context,
+                      ar: 'الجانب الأيمن للسيارة',
+                      en: 'Vehicle right side',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildUploadCard(
+                  title: AppStrings.tr(
+                    context,
+                    ar: 'الجانب الأيسر للسيارة',
+                    en: 'Vehicle left side',
+                  ),
+                  isUploaded: _vehicleLeft != null,
+                  onTap: () => _capture(
+                    (image) => _vehicleLeft = image,
+                    AppStrings.tr(
+                      context,
+                      ar: 'الجانب الأيسر للسيارة',
+                      en: 'Vehicle left side',
+                    ),
                   ),
                 ),
               ],

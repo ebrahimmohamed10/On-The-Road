@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../constants/app_constants.dart';
+import '../../features/auth/services/auth_service.dart';
 // Screens
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/hero_welcome_screen.dart';
@@ -17,6 +18,7 @@ import '../../features/verification/screens/identity_verification_screen.dart';
 import '../../features/verification/screens/driver_documents_screen.dart';
 import '../../features/verification/screens/verification_submitted_screen.dart';
 import '../../features/trips/screens/passenger_home_screen.dart';
+import '../../features/trips/screens/driver_home_screen.dart';
 import '../../features/trips/screens/search_trips_screen.dart';
 import '../../features/trips/screens/ride_results_screen.dart';
 import '../../features/trips/screens/trip_details_screen.dart';
@@ -34,11 +36,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       ? Supabase.instance.client.auth.onAuthStateChange
       : const Stream<dynamic>.empty();
   final authRefresh = GoRouterRefreshStream(authStream);
+  final authService = ref.read(authServiceProvider);
 
   final router = GoRouter(
     initialLocation: '/splash',
     refreshListenable: authRefresh,
-    redirect: (context, state) {
+    redirect: (context, state) async {
       bool isAuth = false;
       if (AppConstants.isSupabaseConfigured) {
         try {
@@ -55,13 +58,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isGoingToVerification = state.matchedLocation.startsWith(
         '/verification',
       );
+      final isOtp = state.matchedLocation == '/auth/otp';
 
       if (isSplash) return null;
       if (!isAuth && (isWelcome || isGoingToAuth || isGoingToVerification)) {
         return null;
       }
       if (!isAuth) return '/auth/login';
-      if (isGoingToAuth || isWelcome || isSplash) return '/passenger/home';
+      // Auth emits a session update as soon as OTP completes. Let OtpScreen
+      // finish routing after it has loaded the account's persisted role.
+      if (isOtp) return null;
+      if (isGoingToAuth || isWelcome) {
+        final destination = await authService.landingDestination();
+        return destination.location;
+      }
+      if (state.matchedLocation.startsWith('/driver/')) {
+        final destination = await authService.landingDestination();
+        return destination.location == state.matchedLocation
+            ? null
+            : destination.location;
+      }
       return null;
     },
     routes: [
@@ -106,7 +122,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             role: data['role'] as String? ?? 'passenger',
             nationalId: data['nationalId'] as String? ?? '',
             dateOfBirth: data['dateOfBirth'] as String? ?? '',
+            gender: data['gender'] as String? ?? 'male',
+            city: data['city'] as String? ?? '',
             idFrontPath: data['idFrontPath'] as String?,
+            documentPaths:
+                (data['documentPaths'] as Map?)?.map(
+                  (key, value) => MapEntry(key.toString(), value.toString()),
+                ) ??
+                const {},
           );
         },
       ),
@@ -118,14 +141,31 @@ final routerProvider = Provider<GoRouter>((ref) {
             role: data['role'] as String? ?? 'passenger',
             nationalId: data['nationalId'] as String? ?? '',
             dateOfBirth: data['dateOfBirth'] as String? ?? '',
-            selfiePath: data['selfiePath'] as String?,
+            gender: data['gender'] as String? ?? 'male',
+            city: data['city'] as String? ?? '',
+            faceFrontPath: data['faceFrontPath'] as String?,
+            faceRightPath: data['faceRightPath'] as String?,
+            faceLeftPath: data['faceLeftPath'] as String?,
+            poseChallengeCompletedAt: DateTime.tryParse(
+              data['poseChallengeCompletedAt'] as String? ?? '',
+            ),
             idFrontPath: data['idFrontPath'] as String?,
+            documentPaths:
+                (data['documentPaths'] as Map?)?.map(
+                  (key, value) => MapEntry(key.toString(), value.toString()),
+                ) ??
+                const {},
           );
         },
       ),
       GoRoute(
         path: '/verification/submitted',
         builder: (_, _) => const VerificationSubmittedScreen(),
+      ),
+
+      GoRoute(
+        path: '/driver/home',
+        builder: (_, _) => const DriverHomeScreen(),
       ),
 
       // Passenger Flow

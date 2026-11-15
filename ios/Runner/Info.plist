@@ -4,6 +4,8 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>تُستخدم الكاميرا لالتقاط صور الهوية والتحقق من الحساب داخل التطبيق.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>تُستخدم مكتبة الصور لاختيار صورة الملف الشخصي أو البطاقة.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

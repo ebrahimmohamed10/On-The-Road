@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 class AppStrings {
   AppStrings._();
 
-  static String tr(BuildContext context, {required String ar, required String en}) {
+  static String tr(
+    BuildContext context, {
+    required String ar,
+    required String en,
+  }) {
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
     return isArabic ? ar : en;
   }
@@ -20,10 +24,16 @@ class AppStrings {
   // Screen 1: Welcome Screen (Figma exact match)
   static String welcomeHeaderSub(BuildContext context) =>
       tr(context, ar: 'رحلتك أسهل معانا', en: 'Your journey is easier with us');
-  static String heroTagline(BuildContext context) =>
-      tr(context, ar: 'كل رحلة،\nتبدأ من هنا.', en: 'Every journey,\nstarts here.');
-  static String heroSubtitle(BuildContext context) =>
-      tr(context, ar: 'اختار رحلتك واستمتع بالطريق.', en: 'Choose your ride and enjoy the road.');
+  static String heroTagline(BuildContext context) => tr(
+    context,
+    ar: 'كل رحلة،\nتبدأ من هنا.',
+    en: 'Every journey,\nstarts here.',
+  );
+  static String heroSubtitle(BuildContext context) => tr(
+    context,
+    ar: 'اختار رحلتك واستمتع بالطريق.',
+    en: 'Choose your ride and enjoy the road.',
+  );
   static String getStarted(BuildContext context) =>
       tr(context, ar: 'ابدأ الآن', en: 'Get started');
   static String alreadyHaveAccount(BuildContext context) =>
@@ -34,8 +44,11 @@ class AppStrings {
   // Screen 2: Login
   static String welcomeBack(BuildContext context) =>
       tr(context, ar: 'أهلاً بك مجدداً', en: 'Welcome back');
-  static String loginSubtitle(BuildContext context) =>
-      tr(context, ar: 'سجل الدخول لمتابعة رحلاتك وحجوزاتك', en: 'Sign in to manage your rides and bookings');
+  static String loginSubtitle(BuildContext context) => tr(
+    context,
+    ar: 'سجل الدخول لمتابعة رحلاتك وحجوزاتك',
+    en: 'Sign in to manage your rides and bookings',
+  );
   static String phoneNumber(BuildContext context) =>
       tr(context, ar: 'رقم الهاتف', en: 'Phone number');
   static String phoneHint(BuildContext context) =>
@@ -48,8 +61,11 @@ class AppStrings {
   // Screen 3: Register
   static String createYourAccount(BuildContext context) =>
       tr(context, ar: 'إنشاء حسابك', en: 'Create your account');
-  static String selectRoleSubtitle(BuildContext context) =>
-      tr(context, ar: 'اختر نوع الحساب للبدء', en: 'Choose your account type to begin');
+  static String selectRoleSubtitle(BuildContext context) => tr(
+    context,
+    ar: 'اختر نوع الحساب للبدء',
+    en: 'Choose your account type to begin',
+  );
   static String passenger(BuildContext context) =>
       tr(context, ar: 'راكب', en: 'Passenger');
   static String driver(BuildContext context) =>
@@ -62,8 +78,11 @@ class AppStrings {
   // Screen 4: Personal Details
   static String personalDetails(BuildContext context) =>
       tr(context, ar: 'البيانات الشخصية', en: 'Personal details');
-  static String personalDetailsSub(BuildContext context) =>
-      tr(context, ar: 'أدخل بياناتك الرسمية لإكمال توثيق الحساب', en: 'Enter your official information to complete verification');
+  static String personalDetailsSub(BuildContext context) => tr(
+    context,
+    ar: 'أدخل بياناتك الرسمية لإكمال توثيق الحساب',
+    en: 'Enter your official information to complete verification',
+  );
   static String nationalId(BuildContext context) =>
       tr(context, ar: 'الرقم القومي (14 رقم)', en: 'National ID (14 digits)');
   static String dateOfBirth(BuildContext context) =>
@@ -82,8 +101,11 @@ class AppStrings {
   // Screen 5: Identity Verification / Selfie
   static String verifyIdentity(BuildContext context) =>
       tr(context, ar: 'التحقق من هويتك', en: 'Verify your identity');
-  static String selfieInstruction(BuildContext context) =>
-      tr(context, ar: 'ضع وجهك داخل الإطار لالتقاط صورة التحقق المباشرة', en: 'Position your face inside the frame for verification');
+  static String selfieInstruction(BuildContext context) => tr(
+    context,
+    ar: 'اتبع التعليمات لالتقاط صور وجهك من الأمام واليمين والشمال',
+    en: 'Follow the prompts to capture your face from the front, right, and left',
+  );
   static String takePhoto(BuildContext context) =>
       tr(context, ar: 'التقاط الصورة', en: 'Take photo');
   static String retake(BuildContext context) =>
@@ -92,24 +114,42 @@ class AppStrings {
   // Screen 6: Driver Documents Upload
   static String driverDocs(BuildContext context) =>
       tr(context, ar: 'وثائق السائق', en: 'Driver documents');
-  static String driverDocsSub(BuildContext context) =>
-      tr(context, ar: 'ارفع صور واضحة لبطاقة الرقم القومي ورخصة القيادة', en: 'Upload clear photos of your National ID and driving license');
-  static String idFront(BuildContext context) =>
-      tr(context, ar: 'بطاقة الرقم القومي (الوجه الأمامي)', en: 'National ID (Front)');
-  static String idBack(BuildContext context) =>
-      tr(context, ar: 'بطاقة الرقم القومي (الوجه الخلفي)', en: 'National ID (Back)');
+  static String driverDocsSub(BuildContext context) => tr(
+    context,
+    ar: 'ارفع صور واضحة لبطاقة الرقم القومي ورخصة القيادة',
+    en: 'Upload clear photos of your National ID and driving license',
+  );
+  static String idFront(BuildContext context) => tr(
+    context,
+    ar: 'بطاقة الرقم القومي (الوجه الأمامي)',
+    en: 'National ID (Front)',
+  );
+  static String idBack(BuildContext context) => tr(
+    context,
+    ar: 'بطاقة الرقم القومي (الوجه الخلفي)',
+    en: 'National ID (Back)',
+  );
   static String drivingLicense(BuildContext context) =>
       tr(context, ar: 'رخصة القيادة السارية', en: 'Valid Driving License');
-  static String tapToUpload(BuildContext context) =>
-      tr(context, ar: 'اضغط للرفع أو التقاط صورة', en: 'Tap to upload or take a photo');
+  static String tapToUpload(BuildContext context) => tr(
+    context,
+    ar: 'اضغط للرفع أو التقاط صورة',
+    en: 'Tap to upload or take a photo',
+  );
   static String submitDocs(BuildContext context) =>
       tr(context, ar: 'إرسال المستندات', en: 'Submit documents');
 
   // Screen 7: Verification Submitted Success
-  static String docsSubmitted(BuildContext context) =>
-      tr(context, ar: 'تم إرسال المستندات بنجاح', en: 'Documents submitted successfully');
-  static String underReview(BuildContext context) =>
-      tr(context, ar: 'طلبك قيد المراجعة حالياً من فريق الإدارة لضمان أمان الرحلات. سنرسل لك إشعاراً فور الاعتماد.', en: 'Your application is currently under review by our admin team. We will notify you once approved.');
+  static String docsSubmitted(BuildContext context) => tr(
+    context,
+    ar: 'تم إرسال المستندات بنجاح',
+    en: 'Documents submitted successfully',
+  );
+  static String underReview(BuildContext context) => tr(
+    context,
+    ar: 'طلبك قيد المراجعة حالياً من فريق الإدارة لضمان أمان الرحلات. سنرسل لك إشعاراً فور الاعتماد.',
+    en: 'Your application is currently under review by our admin team. We will notify you once approved.',
+  );
   static String pendingStatus(BuildContext context) =>
       tr(context, ar: 'قيد المراجعة', en: 'Pending review');
   static String goToHome(BuildContext context) =>
@@ -118,8 +158,11 @@ class AppStrings {
   // Screen 8: OTP
   static String enterOtp(BuildContext context) =>
       tr(context, ar: 'أدخل رمز التحقق', en: 'Enter your code');
-  static String otpSentTo(BuildContext context, String phone) =>
-      tr(context, ar: 'أرسلنا رمزاً مكوناً من 6 أرقام إلى $phone', en: 'We sent a 6-digit code to $phone');
+  static String otpSentTo(BuildContext context, String phone) => tr(
+    context,
+    ar: 'أرسلنا رمزاً مكوناً من 6 أرقام إلى $phone',
+    en: 'We sent a 6-digit code to $phone',
+  );
   static String verifyBtn(BuildContext context) =>
       tr(context, ar: 'تأكيد', en: 'Verify');
   static String resendCode(BuildContext context) =>
@@ -130,8 +173,11 @@ class AppStrings {
       tr(context, ar: 'الملف الشخصي', en: 'Profile');
   static String verifiedUser(BuildContext context) =>
       tr(context, ar: 'حساب موثق رسمياً', en: 'Officially verified');
-  static String vehicleInfo(BuildContext context) =>
-      tr(context, ar: 'بيانات السيارة ورخصة القيادة', en: 'Vehicle & License Info');
+  static String vehicleInfo(BuildContext context) => tr(
+    context,
+    ar: 'بيانات السيارة ورخصة القيادة',
+    en: 'Vehicle & License Info',
+  );
   static String language(BuildContext context) =>
       tr(context, ar: 'لغة التطبيق', en: 'Language');
   static String darkMode(BuildContext context) =>
@@ -144,8 +190,11 @@ class AppStrings {
   // Screen 10 & 12: Search Trips
   static String findRide(BuildContext context) =>
       tr(context, ar: 'البحث عن رحلة', en: 'Find a ride');
-  static String findRideSub(BuildContext context) =>
-      tr(context, ar: 'حدد نقطة الانطلاق والوجهة والتاريخ', en: 'Select pickup, destination and date');
+  static String findRideSub(BuildContext context) => tr(
+    context,
+    ar: 'حدد نقطة الانطلاق والوجهة والتاريخ',
+    en: 'Select pickup, destination and date',
+  );
   static String fromCity(BuildContext context) =>
       tr(context, ar: 'مدينة الانطلاق (من)', en: 'Leaving from');
   static String toCity(BuildContext context) =>
@@ -184,8 +233,11 @@ class AppStrings {
       tr(context, ar: 'اختر المقاعد المطلوبة', en: 'Select your seats');
   static String totalAmount(BuildContext context) =>
       tr(context, ar: 'المبلغ الإجمالي', en: 'Total amount');
-  static String confirmRequestBtn(BuildContext context) =>
-      tr(context, ar: 'تأكيد وإرسال طلب الحجز', en: 'Confirm & send booking request');
+  static String confirmRequestBtn(BuildContext context) => tr(
+    context,
+    ar: 'تأكيد وإرسال طلب الحجز',
+    en: 'Confirm & send booking request',
+  );
   static String proceedToPayment(BuildContext context) =>
       tr(context, ar: 'المتابعة إلى الدفع', en: 'Proceed to payment');
 
@@ -223,8 +275,11 @@ class AppStrings {
       tr(context, ar: 'تم إرسال طلبك', en: 'Request sent');
   static String bookingRequestSent(BuildContext context) =>
       tr(context, ar: 'تم إرسال طلب الحجز', en: 'Booking request sent');
-  static String weWillNotifyDriver(BuildContext context) =>
-      tr(context, ar: 'هنبلغك أول ما السائق يرد على طلبك', en: "We'll notify you as soon as the driver responds");
+  static String weWillNotifyDriver(BuildContext context) => tr(
+    context,
+    ar: 'هنبلغك أول ما السائق يرد على طلبك',
+    en: "We'll notify you as soon as the driver responds",
+  );
   static String waitingForDriver(BuildContext context) =>
       tr(context, ar: 'في انتظار السائق', en: 'Waiting for driver');
   static String ramsesStation(BuildContext context) =>
@@ -253,10 +308,16 @@ class AppStrings {
       tr(context, ar: 'حسابي', en: 'Account');
 
   // Booking Summary helpers
-  static String bookingSuccess(BuildContext context) =>
-      tr(context, ar: 'تم إرسال طلب الحجز بنجاح!', en: 'Booking request sent successfully!');
-  static String bookingSuccessSub(BuildContext context) =>
-      tr(context, ar: 'تم إخطار السائق بطلبك وستتلقى إشعاراً فور قبوله.', en: 'The driver has been notified and you will receive an update once confirmed.');
+  static String bookingSuccess(BuildContext context) => tr(
+    context,
+    ar: 'تم إرسال طلب الحجز بنجاح!',
+    en: 'Booking request sent successfully!',
+  );
+  static String bookingSuccessSub(BuildContext context) => tr(
+    context,
+    ar: 'تم إخطار السائق بطلبك وستتلقى إشعاراً فور قبوله.',
+    en: 'The driver has been notified and you will receive an update once confirmed.',
+  );
   static String bookingCode(BuildContext context) =>
       tr(context, ar: 'رمز الحجز', en: 'Booking Reference');
 
@@ -290,28 +351,46 @@ class AppStrings {
       tr(context, ar: 'اتصال', en: 'Call');
   static String yourSafety(BuildContext context) =>
       tr(context, ar: 'أمانك', en: 'Your safety');
-  static String shareTripWithTrusted(BuildContext context) =>
-      tr(context, ar: 'شارك الرحلة مع شخص تثق فيه', en: 'Share trip with someone you trust');
-  static String emergencyButton(BuildContext context) =>
-      tr(context, ar: 'زر الطوارئ أثناء الرحلة', en: 'Emergency button during the trip');
+  static String shareTripWithTrusted(BuildContext context) => tr(
+    context,
+    ar: 'شارك الرحلة مع شخص تثق فيه',
+    en: 'Share trip with someone you trust',
+  );
+  static String emergencyButton(BuildContext context) => tr(
+    context,
+    ar: 'زر الطوارئ أثناء الرحلة',
+    en: 'Emergency button during the trip',
+  );
   static String paymentCashToDriver(BuildContext context) =>
       tr(context, ar: 'الدفع: كاش للسائق', en: 'Payment: Cash to driver');
   static String cancellationPolicy(BuildContext context) =>
       tr(context, ar: 'سياسة الإلغاء', en: 'Cancellation policy');
   static String cancelBooking(BuildContext context) =>
       tr(context, ar: 'إلغاء الحجز', en: 'Cancel booking');
-  static String cancelBookingConfirm(BuildContext context) =>
-      tr(context, ar: 'هل أنت متأكد من رغبتك في إلغاء الحجز؟', en: 'Are you sure you want to cancel this booking?');
-  static String cancelBookingSub(BuildContext context) =>
-      tr(context, ar: 'يمكنك إلغاء الحجز مجاناً حتى ساعتين قبل موعد انطلاق الرحلة.', en: 'You can cancel free of charge up to 2 hours before trip departure.');
+  static String cancelBookingConfirm(BuildContext context) => tr(
+    context,
+    ar: 'هل أنت متأكد من رغبتك في إلغاء الحجز؟',
+    en: 'Are you sure you want to cancel this booking?',
+  );
+  static String cancelBookingSub(BuildContext context) => tr(
+    context,
+    ar: 'يمكنك إلغاء الحجز مجاناً حتى ساعتين قبل موعد انطلاق الرحلة.',
+    en: 'You can cancel free of charge up to 2 hours before trip departure.',
+  );
   static String keepBooking(BuildContext context) =>
       tr(context, ar: 'التراجع', en: 'Keep booking');
   static String confirmCancel(BuildContext context) =>
       tr(context, ar: 'نعم، إلغاء الحجز', en: 'Yes, cancel booking');
-  static String tripLinkCopied(BuildContext context) =>
-      tr(context, ar: 'تم نسخ رابط الرحلة للمشاركة', en: 'Trip link copied to clipboard');
-  static String defaultCarDetails(BuildContext context) =>
-      tr(context, ar: 'تويوتا كورولا • بيضاء • أ ب ج ١٢٣٤', en: 'Toyota Corolla • White • ABC 1234');
+  static String tripLinkCopied(BuildContext context) => tr(
+    context,
+    ar: 'تم نسخ رابط الرحلة للمشاركة',
+    en: 'Trip link copied to clipboard',
+  );
+  static String defaultCarDetails(BuildContext context) => tr(
+    context,
+    ar: 'تويوتا كورولا • بيضاء • أ ب ج ١٢٣٤',
+    en: 'Toyota Corolla • White • ABC 1234',
+  );
   static String defaultDateHeader(BuildContext context) =>
       tr(context, ar: 'الأربعاء، ٢٨ أكتوبر', en: 'Wed, 28 Oct');
   static String cairoCity(BuildContext context) =>
@@ -327,14 +406,20 @@ class AppStrings {
       tr(context, ar: 'قيّم رحلتك', en: 'Rate your trip');
   static String whatWentWell(BuildContext context) =>
       tr(context, ar: 'إيه اللي عجبك؟', en: 'What went well?');
-  static String writeCommentHint(BuildContext context) =>
-      tr(context, ar: 'اكتب تعليقك (اختياري)', en: 'Write a comment (optional)');
+  static String writeCommentHint(BuildContext context) => tr(
+    context,
+    ar: 'اكتب تعليقك (اختياري)',
+    en: 'Write a comment (optional)',
+  );
   static String submitRating(BuildContext context) =>
       tr(context, ar: 'إرسال التقييم', en: 'Submit rating');
   static String skipRating(BuildContext context) =>
       tr(context, ar: 'تخطى', en: 'Skip');
-  static String ratingSubmitted(BuildContext context) =>
-      tr(context, ar: 'شكراً! تم إرسال تقييمك بنجاح.', en: 'Thank you! Your rating was submitted.');
+  static String ratingSubmitted(BuildContext context) => tr(
+    context,
+    ar: 'شكراً! تم إرسال تقييمك بنجاح.',
+    en: 'Thank you! Your rating was submitted.',
+  );
 
   // Star rating labels
   static String ratingPoor(BuildContext context) =>

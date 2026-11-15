@@ -4,6 +4,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+dependencies {
+    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0")
+}
+
 android {
     namespace = "com.ontheroad.app.on_the_road"
     compileSdk = flutter.compileSdkVersion
