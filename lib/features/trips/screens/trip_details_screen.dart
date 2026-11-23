@@ -207,7 +207,18 @@ class TripDetailsScreen extends ConsumerWidget {
                   ),
                   IconButton.filledTonal(
                     onPressed: () {
-                      context.push('/chat/new');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            AppStrings.tr(
+                              context,
+                              ar: 'المحادثة مع السائق تفتح فور تأكيد الحجز للتنسيق.',
+                              en: 'Chat with the driver opens once booking is confirmed.',
+                            ),
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.chat_bubble_outline_rounded),
                   ),

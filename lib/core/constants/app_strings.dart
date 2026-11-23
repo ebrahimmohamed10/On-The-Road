@@ -448,4 +448,42 @@ class AppStrings {
       tr(context, ar: 'تعامل محترم', en: 'Polite');
   static String tagFunTrip(BuildContext context) =>
       tr(context, ar: 'طريق مريح', en: 'Fun trip');
+
+  // ==========================================================
+  // In-App Chat & Messaging
+  // ==========================================================
+  static String chatInboxTitle(BuildContext context) =>
+      tr(context, ar: 'المحادثات والرسائل', en: 'Conversations & Messages');
+  static String noConversationsTitle(BuildContext context) =>
+      tr(context, ar: 'لا توجد محادثات نشطة', en: 'No active conversations');
+  static String noConversationsSubtitle(BuildContext context) => tr(
+    context,
+    ar: 'ستظهر هنا محادثاتك مع السائقين بعد تأكيد الحجز لتسهيل التواصل والوصول.',
+    en: 'Your chats with drivers will appear here once a booking is confirmed to coordinate your ride.',
+  );
+  static String typeMessageHint(BuildContext context) =>
+      tr(context, ar: 'اكتب رسالتك هنا...', en: 'Type a message here...');
+  static String searchConversations(BuildContext context) =>
+      tr(context, ar: 'بحث في المحادثات...', en: 'Search conversations...');
+  static String todayLabel(BuildContext context) =>
+      tr(context, ar: 'اليوم', en: 'Today');
+  static String yesterdayLabel(BuildContext context) =>
+      tr(context, ar: 'أمس', en: 'Yesterday');
+  static String quickReplyOnWay(BuildContext context) =>
+      tr(context, ar: 'أنا في الطريق 🚗', en: 'On my way 🚗');
+  static String quickReplyArrived(BuildContext context) =>
+      tr(context, ar: 'وصلت لنقطة التجمع 📍', en: 'At pickup point 📍');
+  static String quickReplyDelayed(BuildContext context) =>
+      tr(context, ar: 'تأخرت ٥ دقائق ⏳', en: 'Running 5 mins late ⏳');
+  static String quickReplyThanks(BuildContext context) =>
+      tr(context, ar: 'تمام، شكراً جزيلاً 👍', en: 'Got it, thank you! 👍');
+  static String messageSent(BuildContext context) =>
+      tr(context, ar: 'تم الإرسال', en: 'Sent');
+  static String messageError(BuildContext context) =>
+      tr(context, ar: 'تعذر إرسال الرسالة. يرجى المحاولة مجدداً.', en: 'Could not send message. Please try again.');
+  static String chatTripNotice(BuildContext context) => tr(
+    context,
+    ar: 'المحادثة مخصصة لتنسيق مواعيد وتفاصيل الرحلة. يرجى الالتزام بالاحترام المتبادل.',
+    en: 'Chat is for coordinating ride schedule and details. Please maintain respectful communication.',
+  );
 }

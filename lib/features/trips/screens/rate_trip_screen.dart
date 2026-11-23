@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
+import '../services/trip_service.dart';
 
 class RateTripScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? tripData;
@@ -13,7 +14,7 @@ class RateTripScreen extends ConsumerStatefulWidget {
 }
 
 class _RateTripScreenState extends ConsumerState<RateTripScreen> {
-  int _selectedStars = 4;
+  int _selectedStars = 5;
   final Set<String> _selectedTags = {'safeDriver', 'onTime'};
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmitting = false;
@@ -55,18 +56,39 @@ class _RateTripScreenState extends ConsumerState<RateTripScreen> {
 
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-    context.go('/passenger/bookings');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppStrings.ratingSubmitted(context)),
-        backgroundColor: const Color(0xFF10B981),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    final bookingId = widget.tripData?['bookingId']?.toString();
+    try {
+      if (bookingId != null && bookingId.isNotEmpty) {
+        final comment = _commentController.text.trim();
+        await ref.read(tripServiceProvider).submitRating(
+          bookingId: bookingId,
+          score: _selectedStars,
+          comment: comment.isEmpty ? null : comment,
+        );
+        ref.invalidate(myBookingsProvider(true));
+        ref.invalidate(myBookingsProvider(false));
+      }
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      context.go('/passenger/bookings');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppStrings.ratingSubmitted(context)),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override

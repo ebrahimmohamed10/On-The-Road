@@ -101,11 +101,16 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final toCity = widget.paymentData?['dropoffCity'] as String? ?? '';
     final driverName = widget.paymentData?['driverName'] as String? ?? '';
     final seatsCount =
-        (widget.paymentData?['seatsCount'] as num?)?.toInt() ?? 0;
+        (widget.paymentData?['seatsCount'] as num?)?.toInt() ?? 1;
     final dateText = widget.paymentData?['departureTime']?.toString() ?? '';
     final driverInitials = driverName.isEmpty
         ? '?'
         : driverName.substring(0, 1);
+    final priceMinor = widget.paymentData?['searchPriceMinor'] as num?;
+    final priceEgp = priceMinor != null ? (priceMinor / 100 * seatsCount).round() : null;
+    final priceText = priceEgp != null
+        ? '$priceEgp ${AppStrings.currency(context)}'
+        : AppStrings.tr(context, ar: 'يُحدد عند الحجز', en: 'Calculated at booking');
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -286,14 +291,18 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '$seatsCount seats ; fare calculated by server',
+                        AppStrings.tr(
+                          context,
+                          ar: '$seatsCount مقعد',
+                          en: '$seatsCount seat${seatsCount > 1 ? "s" : ""}',
+                        ),
                         style: TextStyle(
                           fontSize: 13,
                           color: theme.textTheme.bodyMedium?.color,
                         ),
                       ),
                       Text(
-                        'Calculated by server',
+                        priceText,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -335,10 +344,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                         ),
                       ),
                       Text(
-                        'Calculated by server',
-                        style: const TextStyle(
+                        priceText,
+                        style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 17,
+                          color: priceEgp != null ? const Color(0xFFF59E0B) : null,
                         ),
                       ),
                     ],

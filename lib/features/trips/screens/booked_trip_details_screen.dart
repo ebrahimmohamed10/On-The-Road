@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../services/trip_service.dart';
 
 class BookedTripDetailsScreen extends ConsumerWidget {
   final Map<String, dynamic>? tripData;
@@ -24,12 +25,41 @@ class BookedTripDetailsScreen extends ConsumerWidget {
     final dateHeader = tripData?['date'] ?? AppStrings.defaultDateHeader(context);
 
     final pickupTime = tripData?['pickupTime'] ?? (AppStrings.isArabic(context) ? '٠٨:٣٠ ص' : '8:30 AM');
-    final pickupStation = tripData?['pickupStation'] ?? AppStrings.ramsesStation(context);
-    final pickupCity = tripData?['pickupCity'] ?? AppStrings.cairoCity(context);
+    final pickupStation = tripData?['pickupStation'] ?? (tripData?['from'] ?? AppStrings.ramsesStation(context));
+    final pickupCity = tripData?['pickupCity'] ?? (tripData?['from'] ?? AppStrings.cairoCity(context));
 
     final dropoffTime = tripData?['dropoffTime'] ?? (AppStrings.isArabic(context) ? '١١:٠٠ ص' : '11:00 AM');
-    final dropoffStation = tripData?['dropoffStation'] ?? AppStrings.sidiGaberStation(context);
-    final dropoffCity = tripData?['dropoffCity'] ?? AppStrings.alexCity(context);
+    final dropoffStation = tripData?['dropoffStation'] ?? (tripData?['to'] ?? AppStrings.sidiGaberStation(context));
+    final dropoffCity = tripData?['dropoffCity'] ?? (tripData?['to'] ?? AppStrings.alexCity(context));
+
+    final rawStatus = tripData?['rawStatus']?.toString().toLowerCase() ??
+        (tripData?['isPast'] == true ? 'completed' : 'confirmed');
+    final Color statusColor;
+    final String statusLabel;
+    switch (rawStatus) {
+      case 'confirmed':
+        statusColor = const Color(0xFF10B981);
+        statusLabel = AppStrings.confirmedStatus(context);
+        break;
+      case 'pending':
+        statusColor = const Color(0xFFF59E0B);
+        statusLabel = AppStrings.pendingStatus(context);
+        break;
+      case 'completed':
+        statusColor = const Color(0xFF64748B);
+        statusLabel = AppStrings.completedStatus(context);
+        break;
+      case 'cancelled':
+      case 'rejected':
+        statusColor = const Color(0xFFEF4444);
+        statusLabel = rawStatus == 'rejected'
+            ? AppStrings.tr(context, ar: 'مرفوض', en: 'Rejected')
+            : AppStrings.tr(context, ar: 'ملغي', en: 'Cancelled');
+        break;
+      default:
+        statusColor = const Color(0xFF10B981);
+        statusLabel = AppStrings.confirmedStatus(context);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -92,16 +122,16 @@ class BookedTripDetailsScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                          color: statusColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                            color: statusColor.withValues(alpha: 0.25),
                           ),
                         ),
                         child: Text(
-                          AppStrings.confirmedDot(context),
-                          style: const TextStyle(
-                            color: Color(0xFF059669),
+                          statusLabel,
+                          style: TextStyle(
+                            color: statusColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 11,
                           ),
@@ -362,7 +392,10 @@ class BookedTripDetailsScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => context.push('/chat/inbox'),
+                          onPressed: () => context.push(
+                            '/chat/${tripData?['bookingId'] ?? 'inbox'}',
+                            extra: tripData,
+                          ),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 11),
                             side: BorderSide(
@@ -546,42 +579,99 @@ class BookedTripDetailsScreen extends ConsumerWidget {
             const SizedBox(height: 20),
 
             // ==========================================
-            // Cancellation Policy & Cancel Booking Button
+            // Cancellation / Completed Actions
             // ==========================================
-            Center(
-              child: TextButton(
-                onPressed: () => _showCancellationPolicyDialog(context),
-                child: Text(
-                  AppStrings.cancellationPolicy(context),
+            if (rawStatus == 'completed') ...[
+              ElevatedButton.icon(
+                onPressed: () {
+                  context.push(
+                    '/passenger/rate-trip',
+                    extra: {
+                      'bookingId': tripData?['bookingId'],
+                      'driverName': driverName,
+                      'initials': driverInitials,
+                      'route': '$pickupCity ← $dropoffCity',
+                      'dateLabel': dateHeader,
+                    },
+                  );
+                },
+                icon: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B)),
+                label: Text(
+                  AppStrings.rateYourTrip(context),
                   style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFFF59E0B),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),
-            ),
-
-            const SizedBox(height: 6),
-
-            OutlinedButton(
-              onPressed: () => _showCancelBookingConfirmation(context),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                side: const BorderSide(color: Color(0xFFEF4444)),
-                shape: RoundedRectangleBorder(
+            ] else if (rawStatus == 'cancelled') ...[
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.cancel_outlined, color: Color(0xFFEF4444), size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.tr(context, ar: 'تم إلغاء هذا الحجز', en: 'This booking has been cancelled'),
+                      style: const TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Text(
-                AppStrings.cancelBooking(context),
-                style: const TextStyle(
-                  color: Color(0xFFEF4444),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+            ] else ...[
+              Center(
+                child: TextButton(
+                  onPressed: () => _showCancellationPolicyDialog(context),
+                  child: Text(
+                    AppStrings.cancellationPolicy(context),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFF59E0B),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 6),
+              OutlinedButton(
+                onPressed: () => _showCancelBookingConfirmation(context, ref),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: Color(0xFFEF4444)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  AppStrings.cancelBooking(context),
+                  style: const TextStyle(
+                    color: Color(0xFFEF4444),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
 
             const SizedBox(height: 24),
           ],
@@ -743,7 +833,7 @@ class BookedTripDetailsScreen extends ConsumerWidget {
     );
   }
 
-  void _showCancelBookingConfirmation(BuildContext context) {
+  void _showCancelBookingConfirmation(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -755,15 +845,41 @@ class BookedTripDetailsScreen extends ConsumerWidget {
             child: Text(AppStrings.keepBooking(context)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              context.go('/passenger/bookings');
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(AppStrings.tr(context, ar: 'تم إلغاء الحجز بنجاح', en: 'Booking cancelled successfully')),
-                  backgroundColor: const Color(0xFFEF4444),
-                ),
-              );
+              final bookingId = tripData?['bookingId']?.toString();
+              if (bookingId != null && bookingId.isNotEmpty) {
+                try {
+                  await ref.read(tripServiceProvider).cancelBooking(bookingId);
+                  ref.invalidate(myBookingsProvider(false));
+                  ref.invalidate(myBookingsProvider(true));
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString()),
+                        backgroundColor: const Color(0xFFEF4444),
+                      ),
+                    );
+                  }
+                  return;
+                }
+              }
+              if (context.mounted) {
+                context.go('/passenger/bookings');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      AppStrings.tr(
+                        context,
+                        ar: 'تم إلغاء الحجز بنجاح',
+                        en: 'Booking cancelled successfully',
+                      ),
+                    ),
+                    backgroundColor: const Color(0xFFEF4444),
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),

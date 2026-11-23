@@ -30,6 +30,7 @@ import '../../features/bookings/screens/booking_confirmation_screen.dart';
 import '../../features/bookings/screens/my_bookings_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
+import '../../features/chat/screens/chat_inbox_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authStream = AppConstants.isSupabaseConfigured
@@ -254,9 +255,15 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Chat
       GoRoute(
+        path: '/chat/inbox',
+        builder: (_, _) => const ChatInboxScreen(),
+      ),
+      GoRoute(
         path: '/chat/:bookingId',
-        builder: (_, state) =>
-            ChatScreen(bookingId: state.pathParameters['bookingId']!),
+        builder: (_, state) => ChatScreen(
+          bookingId: state.pathParameters['bookingId']!,
+          extra: state.extra as Map<String, dynamic>?,
+        ),
       ),
     ],
   );

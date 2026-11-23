@@ -15,7 +15,28 @@ class SeatBookingScreen extends StatefulWidget {
 class _SeatBookingScreenState extends State<SeatBookingScreen> {
   String? _pickupCity;
   String? _dropoffCity;
-  int _seatCount = 0;
+  int _seatCount = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    final requestedSeats = (widget.bookingData?['seats'] as num?)?.toInt() ??
+        (widget.bookingData?['seatsCount'] as num?)?.toInt() ??
+        1;
+    _seatCount = requestedSeats > 0 ? requestedSeats : 1;
+
+    final stops = _stops;
+    final from = widget.bookingData?['from']?.toString();
+    final to = widget.bookingData?['to']?.toString();
+    if (from != null && stops.contains(from)) {
+      _pickupCity = from;
+    }
+    if (to != null && stops.contains(to)) {
+      if (_pickupCity == null || stops.indexOf(to) > stops.indexOf(_pickupCity!)) {
+        _dropoffCity = to;
+      }
+    }
+  }
 
   List<String> get _stops {
     final legs = (widget.bookingData?['legs'] as List?) ?? const [];
@@ -38,8 +59,13 @@ class _SeatBookingScreenState extends State<SeatBookingScreen> {
     );
   }
 
-  int get _seatCapacity =>
-      (widget.bookingData?['total_seats'] as num?)?.toInt() ?? 0;
+  int get _seatCapacity {
+    final available = (widget.bookingData?['availableSeats'] as num?)?.toInt();
+    if (available != null && available > 0) return available;
+    final total = (widget.bookingData?['total_seats'] as num?)?.toInt();
+    if (total != null && total > 0) return total;
+    return 4;
+  }
 
   bool get _canContinue =>
       widget.bookingData?['id'] != null &&
@@ -58,8 +84,9 @@ class _SeatBookingScreenState extends State<SeatBookingScreen> {
         'dropoffCity': _dropoffCity,
         'seatsCount': _seatCount,
         'driverName': widget.bookingData?['driverName'] ?? '',
-        'departureTime': widget.bookingData?['departure_time'],
+        'departureTime': widget.bookingData?['departureTime'] ?? widget.bookingData?['departure_time'],
         'legs': widget.bookingData?['legs'],
+        'searchPriceMinor': widget.bookingData?['searchPriceMinor'],
       },
     );
   }
@@ -81,19 +108,36 @@ class _SeatBookingScreenState extends State<SeatBookingScreen> {
         ],
       ),
       body: !hasTrip
-          ? const Center(
+          ? Center(
               child: Text(
-                'Trip route data is unavailable. Please return to search.',
+                AppStrings.tr(
+                  context,
+                  ar: 'بيانات مسار الرحلة غير متوفرة. يرجى العودة للبحث.',
+                  en: 'Trip route data is unavailable. Please return to search.',
+                ),
               ),
             )
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                Text('Choose your route', style: theme.textTheme.titleLarge),
+                Text(
+                  AppStrings.tr(
+                    context,
+                    ar: 'اختر خط سيرك',
+                    en: 'Choose your route',
+                  ),
+                  style: theme.textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _pickupCity,
-                  decoration: const InputDecoration(labelText: 'Pickup stop'),
+                  initialValue: _pickupCity,
+                  decoration: InputDecoration(
+                    labelText: AppStrings.tr(
+                      context,
+                      ar: 'نقطة الركوب',
+                      en: 'Pickup stop',
+                    ),
+                  ),
                   items: stops
                       .take(stops.length - 1)
                       .map(
@@ -112,8 +156,14 @@ class _SeatBookingScreenState extends State<SeatBookingScreen> {
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  value: _dropoffCity,
-                  decoration: const InputDecoration(labelText: 'Drop-off stop'),
+                  initialValue: _dropoffCity,
+                  decoration: InputDecoration(
+                    labelText: AppStrings.tr(
+                      context,
+                      ar: 'نقطة النزول',
+                      en: 'Drop-off stop',
+                    ),
+                  ),
                   items: stops
                       .where(
                         (city) =>
@@ -128,11 +178,18 @@ class _SeatBookingScreenState extends State<SeatBookingScreen> {
                   onChanged: (city) => setState(() => _dropoffCity = city),
                 ),
                 const SizedBox(height: 28),
-                Text('Number of seats', style: theme.textTheme.titleMedium),
+                Text(
+                  AppStrings.tr(
+                    context,
+                    ar: 'عدد المقاعد',
+                    en: 'Number of seats',
+                  ),
+                  style: theme.textTheme.titleMedium,
+                ),
                 Row(
                   children: [
                     IconButton(
-                      onPressed: _seatCount > 0
+                      onPressed: _seatCount > 1
                           ? () => setState(() => _seatCount--)
                           : null,
                       icon: const Icon(Icons.remove_circle_outline),
@@ -144,7 +201,14 @@ class _SeatBookingScreenState extends State<SeatBookingScreen> {
                           : null,
                       icon: const Icon(Icons.add_circle_outline),
                     ),
-                    Text('of $_seatCapacity seats available on this trip'),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.tr(
+                        context,
+                        ar: 'من أصل $_seatCapacity مقاعد متاحة',
+                        en: 'of $_seatCapacity seats available',
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 28),
