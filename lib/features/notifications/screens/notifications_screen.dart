@@ -150,7 +150,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             return ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: notifications.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final notif = notifications[index];
                 final isUnread = notif['read_at'] == null;

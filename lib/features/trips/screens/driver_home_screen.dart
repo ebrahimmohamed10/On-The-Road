@@ -253,7 +253,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen>
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                   itemCount: trips.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
                     final trip = trips[index];
                     return _buildDriverTripCard(context, trip, theme, isDark);
@@ -278,7 +278,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen>
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                   itemCount: requests.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
                     final req = requests[index];
                     return _buildBookingRequestCard(context, req, theme, isDark);
@@ -754,7 +754,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen>
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: bookings.length,
-                  separatorBuilder: (_, __) => const Divider(height: 16),
+                  separatorBuilder: (_, _) => const Divider(height: 16),
                   itemBuilder: (ctx, idx) {
                     final b = bookings[idx];
                     final p = b['passenger'] as Map<String, dynamic>? ?? {};

@@ -227,7 +227,7 @@ class PassengerHomeScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(),
                 ),
               ),
-              error: (_, __) => _buildEmptyUpcoming(context, theme),
+              error: (_, _) => _buildEmptyUpcoming(context, theme),
               data: (bookings) {
                 if (bookings.isEmpty) {
                   return _buildEmptyUpcoming(context, theme);

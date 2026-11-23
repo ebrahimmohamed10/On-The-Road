@@ -174,7 +174,7 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                   return ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final conv = filtered[index];
                       return _buildConversationCard(context, conv, theme, isDark);

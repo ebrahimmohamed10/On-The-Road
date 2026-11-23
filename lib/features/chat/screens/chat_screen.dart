@@ -68,7 +68,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       bookingId: widget.bookingId,
       onNewMessage: (newMsg) {
         if (!mounted) return;
-        final currentUserId = ref.read(chatServiceProvider).currentUser?.id;
         // Avoid duplicate if sent by current user and already added optimistically
         final exists = _messages.any((m) =>
             m['id'] != null && m['id'].toString() == newMsg['id']?.toString());
@@ -350,7 +349,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : _messages.isEmpty
+                  : _errorMessage != null && _messages.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: theme.hintColor),
+                            ),
+                          ),
+                        )
+                      : _messages.isEmpty
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.all(32),
@@ -457,7 +467,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 itemCount: quickReplies.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final reply = quickReplies[index];
                   return ActionChip(

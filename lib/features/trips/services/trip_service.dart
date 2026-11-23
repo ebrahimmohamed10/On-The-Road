@@ -455,7 +455,7 @@ class TripService {
         .from('trips')
         .insert({
           'driver_id': user.id,
-          if (vehicleId != null) 'vehicle_id': vehicleId,
+          'vehicle_id': ?vehicleId,
           'origin_city': originCity,
           'destination_city': destinationCity,
           'departure_time': departureTime.toUtc().toIso8601String(),

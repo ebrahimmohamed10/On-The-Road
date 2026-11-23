@@ -867,15 +867,15 @@ class BookedTripDetailsScreen extends ConsumerWidget {
   ) async {
     final bookingId = tripData?['bookingId']?.toString();
     if (bookingId == null) return;
+    final isAr = AppStrings.isArabic(context);
+    final copiedMsg = AppStrings.trackingLinkCopied(context);
 
     try {
       final token = await ref.read(tripServiceProvider).createTripShare(bookingId);
       final trackingUrl = 'https://ontheroad.app/track/$token';
-      final shareText = AppStrings.tr(
-        context,
-        ar: 'أنا مسافر الآن في رحلة عبر تطبيق "على الطريق" من $pickupCity إلى $dropoffCity مع الكابتن $driverName. يمكنك متابعة مسار رحلتي مباشرة من هنا:\n$trackingUrl',
-        en: 'I am traveling on an intercity ride with On The Road from $pickupCity to $dropoffCity with driver $driverName. Track my ride live here:\n$trackingUrl',
-      );
+      final shareText = isAr
+          ? 'أنا مسافر الآن في رحلة عبر تطبيق "على الطريق" من $pickupCity إلى $dropoffCity مع الكابتن $driverName. يمكنك متابعة مسار رحلتي مباشرة من هنا:\n$trackingUrl'
+          : 'I am traveling on an intercity ride with On The Road from $pickupCity to $dropoffCity with driver $driverName. Track my ride live here:\n$trackingUrl';
 
       await Clipboard.setData(ClipboardData(text: shareText));
 
@@ -886,7 +886,7 @@ class BookedTripDetailsScreen extends ConsumerWidget {
             children: [
               const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
               const SizedBox(width: 8),
-              Expanded(child: Text(AppStrings.trackingLinkCopied(context))),
+              Expanded(child: Text(copiedMsg)),
             ],
           ),
           backgroundColor: const Color(0xFF10B981),

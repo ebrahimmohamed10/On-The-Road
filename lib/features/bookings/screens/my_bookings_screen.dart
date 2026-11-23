@@ -173,7 +173,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: bookings.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 14),
+            separatorBuilder: (_, _) => const SizedBox(height: 14),
             itemBuilder: (context, index) {
               final booking = bookings[index];
               return _buildRealTripCard(context, booking, past: past);

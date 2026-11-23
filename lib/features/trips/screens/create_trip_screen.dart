@@ -31,7 +31,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   final TextEditingController _notesController = TextEditingController();
   final List<TextEditingController> _priceControllers = [];
 
-  List<Map<String, dynamic>> _vehicles = [];
   String? _selectedVehicleId;
   bool _isPublishing = false;
 
@@ -63,7 +62,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
             (cities.isNotEmpty ? cities.first : null);
         _destinationCity = _findCity(cities, 'الإسكندرية', 'Alexandria') ??
             (cities.length > 1 ? cities[1] : null);
-        _vehicles = vehicles;
         if (vehicles.isNotEmpty) {
           _selectedVehicleId = vehicles.first['id']?.toString();
         }
@@ -228,7 +226,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
