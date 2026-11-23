@@ -32,6 +32,7 @@ import '../../features/bookings/screens/my_bookings_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/chat/screens/chat_inbox_screen.dart';
+import '../../features/notifications/screens/notifications_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authStream = AppConstants.isSupabaseConfigured
@@ -269,6 +270,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           bookingId: state.pathParameters['bookingId']!,
           extra: state.extra as Map<String, dynamic>?,
         ),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (_, _) => const NotificationsScreen(),
       ),
     ],
   );

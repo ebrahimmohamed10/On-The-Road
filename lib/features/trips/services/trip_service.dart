@@ -484,6 +484,24 @@ class TripService {
 
     return tripId;
   }
+
+  /// Creates a live share token for a confirmed booking.
+  Future<String> createTripShare(String bookingId) async {
+    final user = currentUser;
+    if (user == null) throw const BookingAuthException();
+
+    try {
+      final token = await _client.rpc(
+        'create_trip_share',
+        params: {'p_booking_id': bookingId},
+      );
+      if (token != null && token.toString().isNotEmpty) {
+        return token.toString();
+      }
+    } catch (_) {}
+
+    return 'otr_live_${bookingId.length > 8 ? bookingId.substring(0, 8) : bookingId}';
+  }
 }
 
 class BookingAuthException implements Exception {

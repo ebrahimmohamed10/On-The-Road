@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
+import '../../../shared/widgets/notification_bell_button.dart';
 import '../services/trip_service.dart';
 
 class DriverHomeScreen extends ConsumerStatefulWidget {
@@ -183,6 +184,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen>
           ],
         ),
         actions: [
+          const NotificationBellButton(),
           TextButton.icon(
             onPressed: () => context.go('/passenger/home'),
             icon: const Icon(Icons.swap_horiz_rounded, size: 18),

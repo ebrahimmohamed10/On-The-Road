@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
@@ -463,55 +464,79 @@ class BookedTripDetailsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    AppStrings.yourSafety(context),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                  Row(
+                    children: [
+                      const Icon(Icons.shield_outlined, size: 18, color: Color(0xFFD97706)),
+                      const SizedBox(width: 8),
+                      Text(
+                        AppStrings.yourSafety(context),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Button 1: Share Trip Live
+                  InkWell(
+                    onTap: () => _shareTripWithTrusted(context, ref, pickupCity, dropoffCity, driverName),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.share_location_rounded,
+                            size: 18,
+                            color: Color(0xFFD97706),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              AppStrings.shareTripWithTrusted(context),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFD97706)),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.check_rounded,
-                        size: 16,
-                        color: Color(0xFFD97706),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          AppStrings.shareTripWithTrusted(context),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                  const Divider(height: 14),
+                  // Button 2: Emergency SOS
+                  InkWell(
+                    onTap: () => _showEmergencySheet(context),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.emergency_outlined,
+                            size: 18,
+                            color: Color(0xFFEF4444),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.check_rounded,
-                        size: 16,
-                        color: Color(0xFFD97706),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          AppStrings.emergencyButton(context),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              AppStrings.emergencyButton(context),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFEF4444),
+                              ),
+                            ),
                           ),
-                        ),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFEF4444)),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -828,6 +853,157 @@ class BookedTripDetailsScreen extends ConsumerWidget {
               child: Text(AppStrings.tr(context, ar: 'فهمت ذلك', en: 'Got it')),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _shareTripWithTrusted(
+    BuildContext context,
+    WidgetRef ref,
+    String pickupCity,
+    String dropoffCity,
+    String driverName,
+  ) async {
+    final bookingId = tripData?['bookingId']?.toString();
+    if (bookingId == null) return;
+
+    try {
+      final token = await ref.read(tripServiceProvider).createTripShare(bookingId);
+      final trackingUrl = 'https://ontheroad.app/track/$token';
+      final shareText = AppStrings.tr(
+        context,
+        ar: 'أنا مسافر الآن في رحلة عبر تطبيق "على الطريق" من $pickupCity إلى $dropoffCity مع الكابتن $driverName. يمكنك متابعة مسار رحلتي مباشرة من هنا:\n$trackingUrl',
+        en: 'I am traveling on an intercity ride with On The Road from $pickupCity to $dropoffCity with driver $driverName. Track my ride live here:\n$trackingUrl',
+      );
+
+      await Clipboard.setData(ClipboardData(text: shareText));
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(AppStrings.trackingLinkCopied(context))),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {}
+  }
+
+  void _showEmergencySheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.emergency_outlined, color: Color(0xFFEF4444), size: 24),
+                  const SizedBox(width: 10),
+                  Text(
+                    AppStrings.emergencySheetTitle(context),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                AppStrings.emergencySheetSub(context),
+                style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+              ),
+              const Divider(height: 24),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFEE2E2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.local_police_outlined, color: Color(0xFFDC2626)),
+                ),
+                title: Text(
+                  AppStrings.policeEmergency(context),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                trailing: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.phone, size: 14),
+                  label: const Text('122'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFEF3C7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.medical_services_outlined, color: Color(0xFFD97706)),
+                ),
+                title: Text(
+                  AppStrings.ambulanceEmergency(context),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                trailing: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.phone, size: 14),
+                  label: const Text('123'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.alt_route_rounded, color: Color(0xFF475569)),
+                ),
+                title: Text(
+                  AppStrings.trafficEmergency(context),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                trailing: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.phone, size: 14),
+                  label: const Text('اتصال'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

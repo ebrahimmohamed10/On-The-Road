@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/widgets/notification_bell_button.dart';
 import '../services/trip_service.dart';
 
 class PassengerHomeScreen extends ConsumerWidget {
@@ -83,6 +84,7 @@ class PassengerHomeScreen extends ConsumerWidget {
         ),
         automaticallyImplyLeading: false,
         actions: const [
+          NotificationBellButton(),
           Padding(
             padding: EdgeInsetsDirectional.only(end: 16),
             child: LanguageThemeActions(),

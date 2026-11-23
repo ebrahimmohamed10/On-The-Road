@@ -545,4 +545,39 @@ class AppStrings {
       tr(context, ar: 'التبديل لوضع الراكب', en: 'Switch to Passenger');
   static String switchToDriver(BuildContext context) =>
       tr(context, ar: 'التبديل لوضع السائق', en: 'Switch to Driver');
+
+  // ==========================================================
+  // Notifications & Safety Sharing
+  // ==========================================================
+  static String notificationsTitle(BuildContext context) =>
+      tr(context, ar: 'الإشعارات والتنبيهات', en: 'Notifications & Alerts');
+  static String markAllRead(BuildContext context) =>
+      tr(context, ar: 'تحديد الكل كمقروء', en: 'Mark all as read');
+  static String noNotificationsTitle(BuildContext context) =>
+      tr(context, ar: 'لا توجد إشعارات جديدة', en: 'No new notifications');
+  static String noNotificationsSub(BuildContext context) => tr(
+    context,
+    ar: 'ستصلك هنا إشعارات فورية بكل جديد يخص حجوزاتك، رحلاتك، والرسائل الواردة.',
+    en: 'Real-time updates about your bookings, rides, and messages will appear here.',
+  );
+  static String shareTrackingLink(BuildContext context) =>
+      tr(context, ar: 'مشاركة رابط التتبع المباشر', en: 'Share live tracking link');
+  static String trackingLinkCopied(BuildContext context) => tr(
+    context,
+    ar: 'تم نسخ رابط تتبع الرحلة! يمكنك إرساله للأهل عبر واتساب.',
+    en: 'Tracking link copied! You can send it via WhatsApp to your family.',
+  );
+  static String emergencySheetTitle(BuildContext context) =>
+      tr(context, ar: 'طوارئ وأمان الرحلة (SOS)', en: 'Trip Safety & Emergency (SOS)');
+  static String emergencySheetSub(BuildContext context) => tr(
+    context,
+    ar: 'في حال حدوث أي طارئ لا قدر الله، اتصل مباشرة بالجهات الرسمية أو شارك موقعك الفوري.',
+    en: 'In case of emergency, contact authorities directly or share your instant location.',
+  );
+  static String policeEmergency(BuildContext context) =>
+      tr(context, ar: 'نجدة الشرطة (122)', en: 'Police Emergency (122)');
+  static String ambulanceEmergency(BuildContext context) =>
+      tr(context, ar: 'الإسعاف المصري (123)', en: 'Ambulance (123)');
+  static String trafficEmergency(BuildContext context) =>
+      tr(context, ar: 'طوارئ المرور (01221110000)', en: 'Traffic Emergency');
 }
