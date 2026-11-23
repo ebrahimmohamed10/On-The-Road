@@ -3,23 +3,19 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_strings.dart';
 
-/// Camera capture screen with document scanning support, standard camera fallback,
-/// and gallery selection option.
+/// Camera-only capture screen. Exposes no gallery picker to enforce live capture.
 class InAppCameraScreen extends StatefulWidget {
   const InAppCameraScreen({
     super.key,
     required this.title,
     this.front = false,
-    this.allowGallery = true,
   });
 
   final String title;
   final bool front;
-  final bool allowGallery;
 
   @override
   State<InAppCameraScreen> createState() => _InAppCameraScreenState();
@@ -33,7 +29,6 @@ class _InAppCameraScreenState extends State<InAppCameraScreen> {
   String? _error;
   bool _takingPicture = false;
   bool _initializing = true;
-  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -58,7 +53,7 @@ class _InAppCameraScreenState extends State<InAppCameraScreen> {
           return;
         }
       } catch (_) {
-        // Gracefully fall back to standard camera if GMS scanner is not available
+        // Fall back to standard camera if GMS scanner is not available
       }
     }
 
@@ -128,32 +123,6 @@ class _InAppCameraScreenState extends State<InAppCameraScreen> {
     }
   }
 
-  Future<void> _pickFromGallery() async {
-    try {
-      final picked = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 90,
-      );
-      if (picked != null && mounted) {
-        Navigator.of(context).pop<XFile>(picked);
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppStrings.tr(
-                context,
-                ar: 'تعذر اختيار الصورة من المعرض: $error',
-                en: 'Could not pick image from gallery: $error',
-              ),
-            ),
-          ),
-        );
-      }
-    }
-  }
-
   @override
   void dispose() {
     _controller?.dispose();
@@ -168,14 +137,6 @@ class _InAppCameraScreenState extends State<InAppCameraScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        actions: [
-          if (widget.allowGallery)
-            IconButton(
-              icon: const Icon(Icons.photo_library_outlined),
-              tooltip: AppStrings.tr(context, ar: 'المعرض', en: 'Gallery'),
-              onPressed: _pickFromGallery,
-            ),
-        ],
       ),
       body: SafeArea(
         child: _error != null
@@ -209,19 +170,6 @@ class _InAppCameraScreenState extends State<InAppCameraScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      if (widget.allowGallery)
-                        ElevatedButton.icon(
-                          onPressed: _pickFromGallery,
-                          icon: const Icon(Icons.photo_library_rounded),
-                          label: Text(
-                            AppStrings.tr(
-                              context,
-                              ar: 'اختيار من المعرض أو الملفات',
-                              en: 'Choose from Gallery / Files',
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: _initialize,
                         icon: const Icon(Icons.refresh_rounded),
@@ -273,34 +221,16 @@ class _InAppCameraScreenState extends State<InAppCameraScreen> {
                           ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          if (widget.allowGallery)
-                            IconButton(
-                              onPressed: _pickFromGallery,
-                              iconSize: 36,
-                              color: Colors.white,
-                              icon: const Icon(Icons.photo_library_rounded),
-                              tooltip: AppStrings.tr(
-                                context,
-                                ar: 'المعرض',
-                                en: 'Gallery',
-                              ),
-                            )
-                          else
-                            const SizedBox(width: 48),
-                          FloatingActionButton.large(
-                            heroTag: 'inAppCameraShutter',
-                            backgroundColor: const Color(0xFFF59E0B),
-                            foregroundColor: Colors.white,
-                            onPressed: _takingPicture ? null : _capture,
-                            child: _takingPicture
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Icon(Icons.camera_alt, size: 36),
-                          ),
-                          const SizedBox(width: 48),
-                        ],
+                      child: Center(
+                        child: FloatingActionButton.large(
+                          heroTag: 'inAppCameraShutter',
+                          backgroundColor: const Color(0xFFF59E0B),
+                          foregroundColor: Colors.white,
+                          onPressed: _takingPicture ? null : _capture,
+                          child: _takingPicture
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Icon(Icons.camera_alt, size: 36),
+                        ),
                       ),
                     ),
                   ),
