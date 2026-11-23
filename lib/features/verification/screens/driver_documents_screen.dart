@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
@@ -53,6 +56,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
   bool _ocrLoading = false;
   EgyptianIdOcrResult? _ocrResult;
   String? _ocrError;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -76,24 +80,106 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
     bool readId = false,
   }) async {
     if (!mounted) return;
-    final image = await Navigator.of(context).push<XFile>(
-      MaterialPageRoute(builder: (_) => InAppCameraScreen(title: title)),
-    );
-    if (image == null || !mounted) return;
-    try {
-      if (image.path.isEmpty) throw StateError('scanner returned no image');
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'تعذر فتح الصورة أو تعديلها. تحقق من الأذونات ثم حاول مجددًا.\n$error',
-            ),
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: Color(0xFFF59E0B)),
+                ),
+                title: Text(
+                  AppStrings.tr(
+                    context,
+                    ar: 'التقاط عبر الكاميرا',
+                    en: 'Take photo with Camera',
+                  ),
+                ),
+                onTap: () => Navigator.pop(ctx, 'camera'),
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: Color(0xFF10B981)),
+                ),
+                title: Text(
+                  AppStrings.tr(
+                    context,
+                    ar: 'اختيار من المعرض أو الملفات',
+                    en: 'Choose from Gallery / Files',
+                  ),
+                ),
+                onTap: () => Navigator.pop(ctx, 'gallery'),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+
+    if (choice == null || !mounted) return;
+
+    XFile? image;
+    if (choice == 'camera') {
+      image = await Navigator.of(context).push<XFile>(
+        MaterialPageRoute(builder: (_) => InAppCameraScreen(title: title)),
+      );
+    } else {
+      try {
+        image = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 90,
         );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppStrings.tr(
+                  context,
+                  ar: 'تعذر فتح المعرض: $e',
+                  en: 'Could not open gallery: $e',
+                ),
+              ),
+            ),
+          );
+        }
+        return;
       }
-      return;
     }
+
+    if (image == null || !mounted) return;
     final selectedImage = image;
     setState(() {
       save(selectedImage);
@@ -129,9 +215,19 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                 _vehicleRight == null ||
                 _vehicleLeft == null))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'التقط صور البطاقة وزوايا الوجه الثلاثة، وصور وجهي الرخصة وجوانب السيارة الثلاثة للسائق.',
+            widget.role == 'driver'
+                ? AppStrings.tr(
+                    context,
+                    ar: 'يرجى إرفاق صور البطاقة، ورخصة القيادة، وصور السيارة من الأمام والجانبين.',
+                    en: 'Please upload ID, driving license, and 3-angle vehicle photos.',
+                  )
+                : AppStrings.tr(
+                    context,
+                    ar: 'يرجى إرفاق وجهي بطاقة الرقم القومي.',
+                    en: 'Please upload both sides of your national ID.',
+                  ),
           ),
         ),
       );
@@ -163,7 +259,15 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تعذر رفع المستندات. حاول مرة أخرى.\n$error')),
+          SnackBar(
+            content: Text(
+              AppStrings.tr(
+                context,
+                ar: 'تعذر رفع المستندات: $error',
+                en: 'Could not upload documents: $error',
+              ),
+            ),
+          ),
         );
       }
     } finally {
@@ -173,10 +277,11 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
 
   Widget _buildUploadCard({
     required String title,
-    required bool isUploaded,
+    required XFile? file,
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
+    final isUploaded = file != null;
 
     return InkWell(
       onTap: onTap,
@@ -195,25 +300,32 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: isUploaded
-                    ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                    : const Color(0xFFF59E0B).withValues(alpha: 0.1),
+            if (isUploaded)
+              ClipRRect(
                 borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 54,
+                  height: 54,
+                  child: Image.file(
+                    File(file.path),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.upload_file_rounded,
+                  color: Color(0xFFF59E0B),
+                  size: 28,
+                ),
               ),
-              child: Icon(
-                isUploaded
-                    ? Icons.check_circle_rounded
-                    : Icons.upload_file_rounded,
-                color: isUploaded
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFFF59E0B),
-                size: 28,
-              ),
-            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -231,8 +343,8 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                     isUploaded
                         ? AppStrings.tr(
                             context,
-                            ar: 'تم الإرفاق بنجاح',
-                            en: 'Uploaded successfully',
+                            ar: 'تم الإرفاق بنجاح (انقر للتغيير)',
+                            en: 'Attached (tap to change)',
                           )
                         : AppStrings.tapToUpload(context),
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -246,7 +358,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
             ),
             Icon(
               isUploaded
-                  ? Icons.done_all_rounded
+                  ? Icons.check_circle_rounded
                   : Icons.add_circle_outline_rounded,
               color: isUploaded ? const Color(0xFF10B981) : theme.hintColor,
             ),
@@ -308,7 +420,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
 
               _buildUploadCard(
                 title: AppStrings.idFront(context),
-                isUploaded: _idFront != null,
+                file: _idFront,
                 onTap: () => _capture(
                   (image) => _idFront = image,
                   AppStrings.idFront(context),
@@ -323,8 +435,8 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                 Text(
                   AppStrings.tr(
                     context,
-                    ar: 'جارٍ قراءة البطاقة على الجهاز…',
-                    en: 'Reading the ID on this device…',
+                    ar: 'جارٍ قراءة بيانات البطاقة…',
+                    en: 'Reading ID details…',
                   ),
                 ),
               ],
@@ -337,8 +449,8 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                 Text(
                   AppStrings.tr(
                     context,
-                    ar: 'تعذرت قراءة البطاقة. أعد التصوير بإضاءة جيدة.',
-                    en: 'Could not read the ID. Retake it in good lighting.',
+                    ar: 'تعذرت قراءة البطاقة تلقائيًا. تأكد من وضوح الصورة.',
+                    en: 'Could not read ID automatically. Ensure photo is clear.',
                   ),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
@@ -348,7 +460,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
 
               _buildUploadCard(
                 title: AppStrings.idBack(context),
-                isUploaded: _idBack != null,
+                file: _idBack,
                 onTap: () => _capture(
                   (image) => _idBack = image,
                   AppStrings.idBack(context),
@@ -364,7 +476,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                     ar: 'الوجه الأمامي للرخصة',
                     en: 'License front',
                   ),
-                  isUploaded: _licenseFront != null,
+                  file: _licenseFront,
                   onTap: () => _capture(
                     (image) => _licenseFront = image,
                     AppStrings.drivingLicense(context),
@@ -377,7 +489,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                     ar: 'الوجه الخلفي للرخصة',
                     en: 'License back',
                   ),
-                  isUploaded: _licenseBack != null,
+                  file: _licenseBack,
                   onTap: () => _capture(
                     (image) => _licenseBack = image,
                     AppStrings.drivingLicense(context),
@@ -390,7 +502,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                     ar: 'صورة السيارة من الأمام',
                     en: 'Vehicle front',
                   ),
-                  isUploaded: _vehicleFront != null,
+                  file: _vehicleFront,
                   onTap: () => _capture(
                     (image) => _vehicleFront = image,
                     AppStrings.tr(
@@ -407,7 +519,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                     ar: 'الجانب الأيمن للسيارة',
                     en: 'Vehicle right side',
                   ),
-                  isUploaded: _vehicleRight != null,
+                  file: _vehicleRight,
                   onTap: () => _capture(
                     (image) => _vehicleRight = image,
                     AppStrings.tr(
@@ -424,7 +536,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                     ar: 'الجانب الأيسر للسيارة',
                     en: 'Vehicle left side',
                   ),
-                  isUploaded: _vehicleLeft != null,
+                  file: _vehicleLeft,
                   onTap: () => _capture(
                     (image) => _vehicleLeft = image,
                     AppStrings.tr(
@@ -441,7 +553,14 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
               ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
                 child: _isLoading
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
                     : Text(AppStrings.submitDocs(context)),
               ),
               const SizedBox(height: 20),
@@ -461,48 +580,56 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: matches
+              ? const Color(0xFF10B981)
+              : const Color(0xFFF59E0B),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            result.nationalId == null
-                ? AppStrings.tr(
-                    context,
-                    ar: 'لم أتعرف على رقم قومي كامل؛ أعد تصوير البطاقة بوضوح.',
-                    en: 'No complete national ID number found. Retake the card clearly.',
-                  )
-                : AppStrings.tr(
-                    context,
-                    ar: matches
-                        ? 'تم استخراج الرقم القومي ومطابقته مع الرقم المدخل.'
-                        : 'الرقم المقروء لا يطابق الرقم المدخل؛ راجع الرقم أو أعد التصوير.',
-                    en: matches
-                        ? 'National ID extracted and matches the entered number.'
-                        : 'The detected number does not match. Check the entered number or retake the card.',
-                  ),
-            style: TextStyle(
-              color: result.nationalId != null && !matches
-                  ? Theme.of(context).colorScheme.error
-                  : null,
-            ),
-          ),
-          if (result.rawText.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              AppStrings.tr(
-                context,
-                ar: 'النص المقروء (راجعه بنفسك):',
-                en: 'Recognized text (please review):',
+          Row(
+            children: [
+              Icon(
+                matches
+                    ? Icons.check_circle_rounded
+                    : Icons.info_outline_rounded,
+                color: matches
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFF59E0B),
+                size: 20,
               ),
-            ),
-            const SizedBox(height: 4),
-            SelectableText(
-              result.rawText,
-              textDirection: TextDirection.rtl,
-              maxLines: 8,
-            ),
-          ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  result.nationalId == null
+                      ? AppStrings.tr(
+                          context,
+                          ar: 'لم أتعرف على رقم قومي كامل؛ أعد تصوير البطاقة بوضوح.',
+                          en: 'No complete national ID number found. Retake the card clearly.',
+                        )
+                      : AppStrings.tr(
+                          context,
+                          ar: matches
+                              ? 'تم استخراج الرقم القومي ومطابقته بنجاح: ${result.nationalId}'
+                              : 'الرقم المقروء (${result.nationalId}) يختلف عن الرقم المدخل (${widget.nationalId}).',
+                          en: matches
+                              ? 'National ID verified: ${result.nationalId}'
+                              : 'Detected ID (${result.nationalId}) differs from entered ID (${widget.nationalId}).',
+                        ),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: result.nationalId != null && !matches
+                        ? Theme.of(context).colorScheme.error
+                        : null,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

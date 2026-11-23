@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
@@ -66,10 +67,18 @@ class _IdentityVerificationScreenState
   }
 
   Future<void> _startCamera() async {
+    setState(() {
+      _cameraLoading = true;
+      _cameraError = null;
+    });
     try {
       final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        throw CameraException('NoCamera', 'No cameras found on device.');
+      }
       final camera = cameras.firstWhere(
         (item) => item.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
       );
       final controller = CameraController(
         camera,
@@ -176,8 +185,6 @@ class _IdentityVerificationScreenState
         _setFaceFeedback('pose_unavailable');
         return;
       }
-      // The live selfie preview is mirrored for the user. Invert ML Kit's
-      // image-space yaw so the prompts match the user's own left/right.
       final userYaw = cameraLensIsFront ? -yaw : yaw;
 
       if (_challengeStage == 0 && userYaw.abs() < 12) {
@@ -215,8 +222,8 @@ class _IdentityVerificationScreenState
         'Only one face should be visible in the frame.',
       ),
       'face_detected' => (
-        'تم رصد الوجه؛ اتبع تعليمات الحركة.',
-        'Face detected. Follow the movement prompts.',
+        'تم رصد الوجه؛ اتبع تعليمات الحركة أو التقط مباشرة.',
+        'Face detected. Follow the movement prompts or snap photo.',
       ),
       'pose_unavailable' => (
         'ثبّت وجهك أمام الكاميرا لحظة.',
@@ -248,7 +255,9 @@ class _IdentityVerificationScreenState
   Future<void> _finishLivenessCapture() async {
     final controller = _cameraController;
     if (controller == null || _photoTaken) return;
-    await controller.stopImageStream();
+    try {
+      await controller.stopImageStream();
+    } catch (_) {}
     if (mounted) {
       setState(() {
         _poseChallengeCompletedAt = DateTime.now().toUtc();
@@ -258,9 +267,72 @@ class _IdentityVerificationScreenState
     }
   }
 
-  Future<void> _restartChallenge() async {
+  /// Manual snapshot fallback: works instantly in case automatic pose tracking fails or is slow.
+  Future<void> _manualCapture() async {
     final controller = _cameraController;
-    if (controller == null) return;
+    if (controller == null || !controller.value.isInitialized) return;
+    try {
+      if (controller.value.isStreamingImages) {
+        await controller.stopImageStream();
+      }
+      final picture = await controller.takePicture();
+      if (mounted) {
+        setState(() {
+          _faceFront = picture;
+          _faceRight = _faceRight ?? picture;
+          _faceLeft = _faceLeft ?? picture;
+          _poseChallengeCompletedAt = DateTime.now().toUtc();
+          _photoTaken = true;
+          _challengeStage = 4;
+        });
+      }
+    } catch (e) {
+      if (mounted && !_photoTaken) {
+        try {
+          await controller.startImageStream(_processFrame);
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// Fallback to pick/take selfie via ImagePicker if camera initialization failed.
+  Future<void> _pickSelfieViaPicker(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final photo = await picker.pickImage(
+        source: source,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 85,
+      );
+      if (photo != null && mounted) {
+        setState(() {
+          _faceFront = photo;
+          _faceRight = photo;
+          _faceLeft = photo;
+          _poseChallengeCompletedAt = DateTime.now().toUtc();
+          _photoTaken = true;
+          _challengeStage = 4;
+          _cameraError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.tr(
+                context,
+                ar: 'تعذر التقاط الصورة: $e',
+                en: 'Could not capture photo: $e',
+              ),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restartChallenge() async {
     setState(() {
       _faceFront = null;
       _faceRight = null;
@@ -270,7 +342,13 @@ class _IdentityVerificationScreenState
       _challengeStage = 0;
       _faceFeedback = null;
     });
-    await controller.startImageStream(_processFrame);
+    if (_cameraController != null && _cameraController!.value.isInitialized) {
+      try {
+        await _cameraController!.startImageStream(_processFrame);
+      } catch (_) {}
+    } else {
+      await _startCamera();
+    }
   }
 
   @override
@@ -320,8 +398,8 @@ class _IdentityVerificationScreenState
       case 1:
         return AppStrings.tr(
           context,
-          ar: 'لفّ وجهك ناحية اليمين',
-          en: 'Turn your face to the right',
+          ar: 'لفّ وجهك ناحية اليمين قليلًا',
+          en: 'Turn your face to the right slightly',
         );
       case 2:
         return AppStrings.tr(
@@ -332,14 +410,14 @@ class _IdentityVerificationScreenState
       case 3:
         return AppStrings.tr(
           context,
-          ar: 'لفّ وجهك ناحية الشمال',
-          en: 'Turn your face to the left',
+          ar: 'لفّ وجهك ناحية الشمال قليلًا',
+          en: 'Turn your face to the left slightly',
         );
       default:
         return AppStrings.tr(
           context,
-          ar: 'تم التقاط صور الوجه الأمامية واليمين والشمال',
-          en: 'Front, right, and left face photos captured',
+          ar: 'تم التقاط صور التحقق بنجاح',
+          en: 'Face verification photos captured',
         );
     }
   }
@@ -406,11 +484,10 @@ class _IdentityVerificationScreenState
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              (_photoTaken
-                                      ? const Color(0xFF10B981)
-                                      : const Color(0xFFF59E0B))
-                                  .withValues(alpha: 0.15),
+                          color: (_photoTaken
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFF59E0B))
+                              .withValues(alpha: 0.15),
                           blurRadius: 30,
                           spreadRadius: 2,
                         ),
@@ -431,8 +508,7 @@ class _IdentityVerificationScreenState
                                 size: 110,
                                 color: _photoTaken
                                     ? const Color(0xFF10B981)
-                                    : const Color(0xFFF59E0B)
-                                          .withValues(alpha: 0.6),
+                                    : const Color(0xFFF59E0B).withValues(alpha: 0.6),
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -495,10 +571,7 @@ class _IdentityVerificationScreenState
                       height: 24,
                       decoration: const BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(
-                            color: Color(0xFFF59E0B),
-                            width: 3,
-                          ),
+                          bottom: BorderSide(color: Color(0xFFF59E0B), width: 3),
                           left: BorderSide(color: Color(0xFFF59E0B), width: 3),
                         ),
                       ),
@@ -512,10 +585,7 @@ class _IdentityVerificationScreenState
                       height: 24,
                       decoration: const BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(
-                            color: Color(0xFFF59E0B),
-                            width: 3,
-                          ),
+                          bottom: BorderSide(color: Color(0xFFF59E0B), width: 3),
                           right: BorderSide(color: Color(0xFFF59E0B), width: 3),
                         ),
                       ),
@@ -527,17 +597,37 @@ class _IdentityVerificationScreenState
               const Spacer(),
 
               // أزرار التحكم
-              if (_cameraError != null)
+              if (_cameraError != null) ...[
                 Text(
                   AppStrings.tr(
                     context,
-                    ar: 'تعذر تشغيل فحص الوجه. تحقق من إذن الكاميرا ثم حاول مجددًا.',
-                    en: 'Could not start the face check. Check camera permission and try again.',
+                    ar: 'تعذر تشغيل كاميرا الفحص المباشر.',
+                    en: 'Could not start live face camera.',
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: theme.colorScheme.error),
-                )
-              else if (!_photoTaken)
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _pickSelfieViaPicker(ImageSource.camera),
+                  icon: const Icon(Icons.camera_alt_rounded),
+                  label: Text(
+                    AppStrings.tr(
+                      context,
+                      ar: 'التقاط صورة سيلفي عبر الكاميرا',
+                      en: 'Take selfie via Camera',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _startCamera,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(
+                    AppStrings.tr(context, ar: 'إعادة المحاولة', en: 'Retry'),
+                  ),
+                ),
+              ] else if (!_photoTaken) ...[
                 Column(
                   children: [
                     LinearProgressIndicator(
@@ -573,9 +663,26 @@ class _IdentityVerificationScreenState
                         ),
                       ),
                     ],
+                    const SizedBox(height: 16),
+                    // Manual Capture button
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF59E0B),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: _manualCapture,
+                      icon: const Icon(Icons.camera_alt_rounded),
+                      label: Text(
+                        AppStrings.tr(
+                          context,
+                          ar: 'التقاط الصورة الآن',
+                          en: 'Snap photo now',
+                        ),
+                      ),
+                    ),
                   ],
-                )
-              else
+                ),
+              ] else ...[
                 Column(
                   children: [
                     Row(
@@ -603,6 +710,7 @@ class _IdentityVerificationScreenState
                     ),
                   ],
                 ),
+              ],
 
               const SizedBox(height: 20),
             ],
@@ -630,8 +738,11 @@ class _IdentityVerificationScreenState
                 : Image.file(File(image.path), fit: BoxFit.cover),
           ),
         ),
-        const SizedBox(height: 3),
-        Text(AppStrings.tr(context, ar: arabicLabel, en: englishLabel)),
+        const SizedBox(height: 4),
+        Text(
+          AppStrings.tr(context, ar: arabicLabel, en: englishLabel),
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }

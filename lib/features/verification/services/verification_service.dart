@@ -11,18 +11,23 @@ class VerificationService {
     final bytes = await file.readAsBytes();
     final path = '$userId/${DateTime.now().microsecondsSinceEpoch}_$kind.jpg';
 
-    await _client.storage
-        .from('identity-documents')
-        .uploadBinary(
-          path,
-          bytes,
-          fileOptions: const FileOptions(
-            contentType: 'image/jpeg',
-            upsert: false,
-          ),
-        );
-
-    return path;
+    try {
+      await _client.storage
+          .from('identity-documents')
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: false,
+            ),
+          );
+      return path;
+    } on StorageException catch (e) {
+      throw StateError('خطأ أثناء رفع $kind: ${e.message}');
+    } catch (e) {
+      throw StateError('تعذر رفع $kind: $e');
+    }
   }
 
   Future<void> submit({
@@ -46,20 +51,20 @@ class VerificationService {
     final user = _client.auth.currentUser;
 
     if (user == null) {
-      throw StateError('Sign in before submitting verification.');
+      throw StateError('يجب تسجيل الدخول أولًا لتقديم طلب التحقق.');
     }
 
     if (role != 'passenger' && role != 'driver') {
-      throw ArgumentError.value(role, 'role', 'Unsupported account role.');
+      throw ArgumentError.value(role, 'role', 'نوع الحساب غير مدعوم.');
     }
 
     if (role == 'driver' && (licenseFront == null || licenseBack == null)) {
-      throw ArgumentError('Both sides of the driving license are required.');
+      throw ArgumentError('يجب تصوير وجهي رخصة القيادة.');
     }
     if (role == 'driver' &&
         (vehicleFront == null || vehicleRight == null || vehicleLeft == null)) {
       throw ArgumentError(
-        'Front, right, and left vehicle photos are required.',
+        'يجب تصوير السيارة من الأمام والجانب الأيمن والجانب الأيسر.',
       );
     }
 
@@ -95,7 +100,7 @@ class VerificationService {
       'city': city,
       'id_front_path': idFrontPath,
       'id_back_path': idBackPath,
-      // Keep the legacy required selfie_path populated with the frontal image.
+      // Keep legacy selfie_path populated with the frontal image.
       'selfie_path': faceFrontPath,
       'face_front_path': faceFrontPath,
       'face_right_path': faceRightPath,
@@ -110,7 +115,11 @@ class VerificationService {
       'vehicle_left_path': vehicleLeftPath,
     };
 
-    await _client.from('verification_requests').insert(payload);
+    try {
+      await _client.from('verification_requests').insert(payload);
+    } on PostgrestException catch (e) {
+      throw StateError('خطأ في قاعدة البيانات: ${e.message}');
+    }
   }
 }
 
