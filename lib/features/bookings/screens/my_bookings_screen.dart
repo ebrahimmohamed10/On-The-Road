@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
+import '../../../shared/widgets/notification_bell_button.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../trips/services/trip_service.dart';
 
@@ -91,6 +92,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         title: Text(AppStrings.myTrips(context)),
         automaticallyImplyLeading: false,
         actions: const [
+          NotificationBellButton(),
           Padding(
             padding: EdgeInsetsDirectional.only(end: 16),
             child: LanguageThemeActions(showThemeToggle: false),

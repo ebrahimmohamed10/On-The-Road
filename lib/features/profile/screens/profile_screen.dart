@@ -10,6 +10,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/locale_provider.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/widgets/notification_bell_button.dart';
 import 'avatar_crop_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -233,6 +234,131 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  void _showHelpSupportSheet(BuildContext context) {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.headset_mic_rounded,
+                      color: Color(0xFFF59E0B),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isArabic ? 'مركز الدعم والمساعدة' : 'Help & Support Center',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      Text(
+                        isArabic ? 'فريق أون ذا رود في خدمتك على مدار الساعة' : 'On The Road team is at your service 24/7',
+                        style: TextStyle(fontSize: 12, color: Theme.of(ctx).hintColor),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Divider(),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF10B981)),
+                ),
+                title: Text(isArabic ? 'خدمة العملاء الهاتفية' : 'Customer Care Hotline'),
+                subtitle: const Text('19842 (24/7)'),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isArabic ? 'جاري الاتصال بخدمة العملاء 19842...' : 'Calling hotline 19842...',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF25D366).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366)),
+                ),
+                title: Text(isArabic ? 'واتساب الدعم الفني' : 'WhatsApp Support'),
+                subtitle: const Text('+20 100 000 0000'),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isArabic ? 'تم فتح محادثة الدعم عبر واتساب' : 'Opening WhatsApp support...',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.email_outlined, color: Color(0xFF0F172A)),
+                ),
+                title: Text(isArabic ? 'البريد الإلكتروني' : 'Support Email'),
+                subtitle: const Text('support@ontheroad.eg'),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isArabic ? 'يمكنك مراسلتنا على: support@ontheroad.eg' : 'Email us at: support@ontheroad.eg',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _requestAccountDeletion(BuildContext context) async {
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
     final confirmed = await showDialog<bool>(
@@ -369,6 +495,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(
         title: Text(AppStrings.profile(context)),
         automaticallyImplyLeading: false,
+        actions: const [
+          NotificationBellButton(),
+          SizedBox(width: 8),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -598,7 +728,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   _buildTile(
                     icon: Icons.headset_mic_outlined,
                     title: AppStrings.helpSupport(context),
-                    onTap: () {},
+                    onTap: () => _showHelpSupportSheet(context),
                   ),
 
                   _buildTile(
