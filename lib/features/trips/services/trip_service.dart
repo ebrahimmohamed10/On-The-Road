@@ -28,6 +28,16 @@ final myBookingsProvider =
       return service.getMyBookings(past: past);
     });
 
+final driverTripsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  return ref.watch(tripServiceProvider).getDriverTrips();
+});
+
+final driverPendingBookingsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  return ref.watch(tripServiceProvider).getDriverPendingBookings();
+});
+
 class TripService {
   final SupabaseClient _client;
   TripService(this._client);
@@ -253,6 +263,226 @@ class TripService {
         }
       } catch (_) {}
     }
+  }
+  /// Fetches vehicles registered for the driver.
+  Future<List<Map<String, dynamic>>> getDriverVehicles() async {
+    final user = currentUser;
+    if (user == null) return const [];
+    try {
+      final rows = await _client
+          .from('vehicles')
+          .select('id, make, model, color, plate, seats, status')
+          .eq('owner_id', user.id);
+      return List<Map<String, dynamic>>.from(rows);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Fetches all trips created by the logged-in driver.
+  Future<List<Map<String, dynamic>>> getDriverTrips() async {
+    final user = currentUser;
+    if (user == null) return const [];
+
+    try {
+      final rows = await _client
+          .from('trips')
+          .select('''
+            *,
+            segments:trip_segments(*),
+            bookings:bookings(id, status, seats_booked, total_price, pickup_city, dropoff_city, passenger:profiles!passenger_id(id, name, phone, avatar_url))
+          ''')
+          .eq('driver_id', user.id)
+          .order('departure_time', ascending: false);
+
+      return List<Map<String, dynamic>>.from(rows);
+    } catch (_) {
+      try {
+        final rows = await _client
+            .from('trips')
+            .select('*, segments:trip_segments(*)')
+            .eq('driver_id', user.id)
+            .order('departure_time', ascending: false);
+        return List<Map<String, dynamic>>.from(rows);
+      } catch (e) {
+        return const [];
+      }
+    }
+  }
+
+  /// Fetches pending passenger booking requests awaiting driver approval.
+  Future<List<Map<String, dynamic>>> getDriverPendingBookings() async {
+    final user = currentUser;
+    if (user == null) return const [];
+
+    try {
+      final rows = await _client
+          .from('bookings')
+          .select('''
+            id,
+            trip_id,
+            passenger_id,
+            pickup_city,
+            dropoff_city,
+            seats_booked,
+            total_price,
+            status,
+            created_at,
+            trip:trips!inner(id, driver_id, origin_city, destination_city, departure_time),
+            passenger:profiles!passenger_id(id, name, phone, avatar_url, rating)
+          ''')
+          .eq('trip.driver_id', user.id)
+          .eq('status', 'pending')
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(rows);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Driver responds to a booking (accept or reject).
+  Future<void> respondToBooking({
+    required String bookingId,
+    required bool accept,
+    String? reason,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw const BookingAuthException();
+
+    try {
+      await _client.rpc(
+        'driver_respond_booking',
+        params: {
+          'p_booking_id': bookingId,
+          'p_accept': accept,
+          'p_reason': reason,
+        },
+      );
+    } catch (_) {
+      // Fallback: direct update
+      await _client
+          .from('bookings')
+          .update({
+            'status': accept ? 'confirmed' : 'rejected',
+            'response_at': DateTime.now().toIso8601String(),
+            if (!accept && reason != null) 'status_reason': reason,
+          })
+          .eq('id', bookingId);
+    }
+  }
+
+  /// Starts the trip (status: in_progress).
+  Future<void> startTrip(String tripId) async {
+    final user = currentUser;
+    if (user == null) throw const BookingAuthException();
+
+    try {
+      await _client.rpc('start_trip', params: {'p_trip_id': tripId});
+    } catch (_) {
+      await _client
+          .from('trips')
+          .update({'status': 'in_progress'})
+          .eq('id', tripId)
+          .eq('driver_id', user.id);
+    }
+  }
+
+  /// Completes the trip (status: completed).
+  Future<void> completeTrip(String tripId) async {
+    final user = currentUser;
+    if (user == null) throw const BookingAuthException();
+
+    try {
+      await _client.rpc('complete_trip', params: {'p_trip_id': tripId});
+    } catch (_) {
+      await _client
+          .from('trips')
+          .update({'status': 'completed'})
+          .eq('id', tripId)
+          .eq('driver_id', user.id);
+    }
+  }
+
+  /// Creates and publishes a new trip.
+  Future<String> createAndPublishTrip({
+    String? vehicleId,
+    required List<String> cityIds,
+    required List<String> cityNames,
+    required DateTime departureTime,
+    required DateTime arrivalTime,
+    required int totalSeats,
+    required List<int> legPrices,
+    String? notes,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw const BookingAuthException();
+
+    // Try PostgreSQL RPC create_trip_draft & publish_trip
+    if (vehicleId != null) {
+      try {
+        final legPricesMinor = legPrices.map((p) => p * 100).toList();
+        final tripId = await _client.rpc(
+          'create_trip_draft',
+          params: {
+            'p_vehicle_id': vehicleId,
+            'p_city_path': cityIds,
+            'p_departure_time': departureTime.toUtc().toIso8601String(),
+            'p_arrival_time': arrivalTime.toUtc().toIso8601String(),
+            'p_total_seats': totalSeats,
+            'p_leg_prices_minor': legPricesMinor,
+            'p_notes': notes,
+          },
+        );
+
+        if (tripId != null) {
+          await _client.rpc(
+            'publish_trip',
+            params: {'p_trip_id': tripId.toString()},
+          );
+          return tripId.toString();
+        }
+      } catch (_) {
+        // Fallback to direct insertion below
+      }
+    }
+
+    // Direct insertion fallback
+    final originCity = cityNames.first;
+    final destinationCity = cityNames.last;
+
+    final tripRow = await _client
+        .from('trips')
+        .insert({
+          'driver_id': user.id,
+          if (vehicleId != null) 'vehicle_id': vehicleId,
+          'origin_city': originCity,
+          'destination_city': destinationCity,
+          'departure_time': departureTime.toUtc().toIso8601String(),
+          'arrival_time': arrivalTime.toUtc().toIso8601String(),
+          'total_seats': totalSeats,
+          'status': 'published',
+          if (notes != null && notes.isNotEmpty) 'notes': notes,
+        })
+        .select()
+        .single();
+
+    final tripId = tripRow['id'].toString();
+
+    // Insert segments
+    for (int i = 0; i < cityNames.length - 1; i++) {
+      final price = legPrices.length > i ? legPrices[i] : 100;
+      await _client.from('trip_segments').insert({
+        'trip_id': tripId,
+        'from_city': cityNames[i],
+        'to_city': cityNames[i + 1],
+        'segment_order': i + 1,
+        'price': price,
+        'price_minor': price * 100,
+      });
+    }
+
+    return tripId;
   }
 }
 

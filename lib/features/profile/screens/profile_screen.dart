@@ -513,16 +513,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 32),
 
                   // خيارات الإعدادات
-                  _buildTile(
-                    icon: Icons.person_outline_rounded,
-                    title: AppStrings.personalDetails(context),
-                    onTap: () => context.push(
-                      '/verification/personal-details',
-                      extra: {'role': role},
+                  if (role == 'driver') ...[
+                    _buildTile(
+                      icon: Icons.dashboard_customize_rounded,
+                      title: AppStrings.driverDashboard(context),
+                      iconColor: const Color(0xFFF59E0B),
+                      onTap: () => context.go('/driver/home'),
                     ),
-                  ),
-
-                  if (role == 'driver')
                     _buildTile(
                       icon: Icons.directions_car_filled_outlined,
                       title: AppStrings.vehicleInfo(context),
@@ -531,6 +528,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         extra: {'role': 'driver'},
                       ),
                     ),
+                  ] else ...[
+                    _buildTile(
+                      icon: Icons.drive_eta_rounded,
+                      title: AppStrings.tr(
+                        context,
+                        ar: 'انضم ككابتن وسائق معتمد',
+                        en: 'Become an approved driver',
+                      ),
+                      iconColor: const Color(0xFF10B981),
+                      onTap: () => context.push(
+                        '/verification/personal-details',
+                        extra: {'role': 'driver'},
+                      ),
+                    ),
+                  ],
+
+                  _buildTile(
+                    icon: Icons.person_outline_rounded,
+                    title: AppStrings.personalDetails(context),
+                    onTap: () => context.push(
+                      '/verification/personal-details',
+                      extra: {'role': role},
+                    ),
+                  ),
 
                   // زر تبديل اللغة
                   _buildTile(

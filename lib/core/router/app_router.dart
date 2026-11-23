@@ -19,6 +19,7 @@ import '../../features/verification/screens/driver_documents_screen.dart';
 import '../../features/verification/screens/verification_submitted_screen.dart';
 import '../../features/trips/screens/passenger_home_screen.dart';
 import '../../features/trips/screens/driver_home_screen.dart';
+import '../../features/trips/screens/create_trip_screen.dart';
 import '../../features/trips/screens/search_trips_screen.dart';
 import '../../features/trips/screens/ride_results_screen.dart';
 import '../../features/trips/screens/trip_details_screen.dart';
@@ -167,6 +168,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/driver/home',
         builder: (_, _) => const DriverHomeScreen(),
+      ),
+      GoRoute(
+        path: '/driver/create-trip',
+        builder: (_, _) => const CreateTripScreen(),
       ),
 
       // Passenger Flow

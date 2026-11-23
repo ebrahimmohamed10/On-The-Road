@@ -486,4 +486,63 @@ class AppStrings {
     ar: 'المحادثة مخصصة لتنسيق مواعيد وتفاصيل الرحلة. يرجى الالتزام بالاحترام المتبادل.',
     en: 'Chat is for coordinating ride schedule and details. Please maintain respectful communication.',
   );
+
+  // ==========================================================
+  // Driver Flow & Trip Management
+  // ==========================================================
+  static String driverDashboard(BuildContext context) =>
+      tr(context, ar: 'لوحة تحكم السائق', en: 'Driver Dashboard');
+  static String publishNewTrip(BuildContext context) =>
+      tr(context, ar: 'نشر رحلة جديدة', en: 'Publish New Trip');
+  static String myDriverTrips(BuildContext context) =>
+      tr(context, ar: 'رحلاتي المنشورة', en: 'My Published Trips');
+  static String bookingRequests(BuildContext context) =>
+      tr(context, ar: 'طلبات الحجز', en: 'Booking Requests');
+  static String noDriverTrips(BuildContext context) =>
+      tr(context, ar: 'لم تقم بنشر أي رحلات بعد', en: 'You have not published any trips yet');
+  static String noDriverTripsSub(BuildContext context) => tr(
+    context,
+    ar: 'انشر رحلتك القادمة بين المحافظات وحدد خط السير والأسعار لتبدأ استقبال الركاب.',
+    en: 'Publish your upcoming intercity ride, set your route and fares to start receiving passengers.',
+  );
+  static String noPendingRequests(BuildContext context) =>
+      tr(context, ar: 'لا توجد طلبات حجز معلقة حالياً', en: 'No pending booking requests right now');
+  static String acceptBooking(BuildContext context) =>
+      tr(context, ar: 'قبول', en: 'Accept');
+  static String rejectBooking(BuildContext context) =>
+      tr(context, ar: 'رفض', en: 'Reject');
+  static String startTripBtn(BuildContext context) =>
+      tr(context, ar: 'بدء الرحلة 🚗', en: 'Start Trip 🚗');
+  static String completeTripBtn(BuildContext context) =>
+      tr(context, ar: 'إنهاء الرحلة 🏁', en: 'Complete Trip 🏁');
+  static String confirmBoardingBtn(BuildContext context) =>
+      tr(context, ar: 'تأكيد الركوب ✓', en: 'Confirm Boarding ✓');
+  static String collectCashBtn(BuildContext context) =>
+      tr(context, ar: 'استلام الكاش 💵', en: 'Collect Cash 💵');
+  static String tripStartedSuccess(BuildContext context) =>
+      tr(context, ar: 'تم بدء الرحلة بنجاح! رافقتكم السلامة.', en: 'Trip started successfully! Drive safely.');
+  static String tripCompletedSuccess(BuildContext context) =>
+      tr(context, ar: 'تم إنهاء الرحلة بنجاح! شكراً لك.', en: 'Trip completed successfully! Thank you.');
+  static String bookingAcceptedSuccess(BuildContext context) =>
+      tr(context, ar: 'تم قبول طلب الحجز وتأكيد المقاعد.', en: 'Booking accepted and seats confirmed.');
+  static String bookingRejectedSuccess(BuildContext context) =>
+      tr(context, ar: 'تم رفض طلب الحجز.', en: 'Booking request rejected.');
+  static String vehicleSelection(BuildContext context) =>
+      tr(context, ar: 'السيارة المعتمدة للرحلة', en: 'Approved Vehicle');
+  static String routeStops(BuildContext context) =>
+      tr(context, ar: 'محطات وخط السير', en: 'Route & Stops');
+  static String departureTimeLabel(BuildContext context) =>
+      tr(context, ar: 'موعد التحرك والانطلاق', en: 'Departure Time');
+  static String arrivalTimeLabel(BuildContext context) =>
+      tr(context, ar: 'الموعد التقريبي للوصول', en: 'Estimated Arrival');
+  static String availableSeatsLabel(BuildContext context) =>
+      tr(context, ar: 'المقاعد المتاحة للركاب', en: 'Available Passenger Seats');
+  static String tripNotesLabel(BuildContext context) =>
+      tr(context, ar: 'تعليمات أو ملاحظات للركاب (اختياري)', en: 'Passenger Notes (Optional)');
+  static String publishTripAction(BuildContext context) =>
+      tr(context, ar: 'تأكيد ونشر الرحلة الآن', en: 'Confirm & Publish Ride');
+  static String switchToPassenger(BuildContext context) =>
+      tr(context, ar: 'التبديل لوضع الراكب', en: 'Switch to Passenger');
+  static String switchToDriver(BuildContext context) =>
+      tr(context, ar: 'التبديل لوضع السائق', en: 'Switch to Driver');
 }
