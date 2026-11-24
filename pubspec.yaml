@@ -45,6 +45,9 @@ dependencies:
   tesseract_ocr: ^0.5.0
   image_picker: ^1.2.4
   crop_your_image: ^2.0.1
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  url_launcher: ^6.3.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
+import '../../../shared/widgets/trip_route_map_view.dart';
 
 class TripDetailsScreen extends ConsumerWidget {
   final String tripId;
@@ -41,6 +42,20 @@ class TripDetailsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // خريطة المسار التفاعلية المباشرة
+            TripRouteMapView(
+              originCity: legs.isNotEmpty
+                  ? (legs.first['from_city']?.toString() ?? 'القاهرة')
+                  : (tripData?['from']?.toString() ?? 'القاهرة'),
+              destinationCity: legs.isNotEmpty
+                  ? (legs.last['to_city']?.toString() ?? 'الإسكندرية')
+                  : (tripData?['to']?.toString() ?? 'الإسكندرية'),
+              waypoints: legs.length > 1
+                  ? legs.sublist(0, legs.length - 1).map((l) => l['to_city'].toString()).toList()
+                  : null,
+            ),
+            const SizedBox(height: 20),
+
             // مسار المحطات والتوقفات (Route Stepper)
             Container(
               padding: const EdgeInsets.all(20),

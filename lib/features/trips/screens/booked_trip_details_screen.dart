@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/widgets/trip_route_map_view.dart';
 import '../services/trip_service.dart';
 
 class BookedTripDetailsScreen extends ConsumerWidget {
@@ -221,6 +222,19 @@ class BookedTripDetailsScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // ==========================================
+            // Card 2.5: Interactive Live Map & GPS
+            // ==========================================
+            TripRouteMapView(
+              originCity: pickupCity,
+              destinationCity: dropoffCity,
+              originStation: pickupStation,
+              destinationStation: dropoffStation,
+              height: 200,
             ),
 
             const SizedBox(height: 14),
