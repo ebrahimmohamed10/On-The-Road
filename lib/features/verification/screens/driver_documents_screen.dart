@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../shared/widgets/language_theme_actions.dart';
@@ -51,6 +52,18 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
   XFile? _vehicleFront;
   XFile? _vehicleRight;
   XFile? _vehicleLeft;
+  XFile? _vehicleRear;
+  XFile? _vehicleLicenseFront;
+  XFile? _vehicleLicenseBack;
+  final _makeController = TextEditingController();
+  final _modelController = TextEditingController();
+  final _colorController = TextEditingController();
+  final _plateController = TextEditingController();
+  final _seatsController = TextEditingController(text: '4');
+  final Map<String, String> _savedPaths = {};
+  final Map<String, String> _signedUrls = {};
+  bool _reuseIdentity = false;
+  bool _hasSavedFace = false;
   bool _isLoading = false;
   bool _ocrLoading = false;
   EgyptianIdOcrResult? _ocrResult;
@@ -62,14 +75,71 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
     final idFrontPath = widget.idFrontPath;
     final docs = widget.documentPaths;
     final resolvedIdFront = idFrontPath ?? docs['national_id_front'];
-    if (resolvedIdFront != null) _idFront = XFile(resolvedIdFront);
-    if (docs['national_id_back'] case final path?) _idBack = XFile(path);
-    if (docs['driver_license_front'] case final path?) {
-      _licenseFront = XFile(path);
+    _savedPaths.addAll(docs);
+    if (resolvedIdFront != null && File(resolvedIdFront).existsSync()) {
+      _idFront = XFile(resolvedIdFront);
     }
-    if (docs['driver_license_back'] case final path?) {
-      _licenseBack = XFile(path);
+    final idBackPath = docs['national_id_back'];
+    if (idBackPath != null && File(idBackPath).existsSync())
+      _idBack = XFile(idBackPath);
+    final licenseFrontPath = docs['driver_license_front'];
+    if (licenseFrontPath != null && File(licenseFrontPath).existsSync()) {
+      _licenseFront = XFile(licenseFrontPath);
     }
+    final licenseBackPath = docs['driver_license_back'];
+    if (licenseBackPath != null && File(licenseBackPath).existsSync()) {
+      _licenseBack = XFile(licenseBackPath);
+    }
+    if (widget.poseChallengeCompletedAt != null &&
+        widget.faceFrontPath != null &&
+        File(widget.faceFrontPath!).existsSync()) {
+      _savedPaths['face_scan_front'] = widget.faceFrontPath!;
+      _savedPaths['face_scan_right'] = widget.faceRightPath!;
+      _savedPaths['face_scan_left'] = widget.faceLeftPath!;
+    } else {
+      if (widget.faceFrontPath != null)
+        _savedPaths['face_scan_front'] = widget.faceFrontPath!;
+      if (widget.faceRightPath != null)
+        _savedPaths['face_scan_right'] = widget.faceRightPath!;
+      if (widget.faceLeftPath != null)
+        _savedPaths['face_scan_left'] = widget.faceLeftPath!;
+    }
+    _hasSavedFace =
+        _savedPaths['face_scan_front'] != null &&
+        _savedPaths['face_scan_right'] != null &&
+        _savedPaths['face_scan_left'] != null;
+    _reuseIdentity =
+        (resolvedIdFront != null || docs['national_id_front'] != null) &&
+        docs['national_id_back'] != null &&
+        _hasSavedFace &&
+        _idFront == null &&
+        _idBack == null;
+    _loadSavedPreviews();
+  }
+
+  Future<void> _loadSavedPreviews() async {
+    for (final entry in _savedPaths.entries) {
+      if (File(entry.value).existsSync()) continue;
+      final bucket = entry.key.startsWith('vehicle_license_')
+          ? 'vehicle-documents'
+          : 'identity-documents';
+      try {
+        final url = await Supabase.instance.client.storage
+            .from(bucket)
+            .createSignedUrl(entry.value, 3600);
+        if (mounted) setState(() => _signedUrls[entry.key] = url);
+      } catch (_) {}
+    }
+  }
+
+  @override
+  void dispose() {
+    _makeController.dispose();
+    _modelController.dispose();
+    _colorController.dispose();
+    _plateController.dispose();
+    _seatsController.dispose();
+    super.dispose();
   }
 
   Future<void> _capture(
@@ -107,26 +177,42 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
   }
 
   Future<void> _submit() async {
-    if (_idFront == null ||
-        _idBack == null ||
-        widget.faceFrontPath == null ||
-        widget.faceRightPath == null ||
-        widget.faceLeftPath == null ||
-        widget.poseChallengeCompletedAt == null ||
+    if ((_idFront == null &&
+            _savedPaths['national_id_front'] == null &&
+            widget.idFrontPath == null) ||
+        (_idBack == null && _savedPaths['national_id_back'] == null) ||
+        (!_hasSavedFace &&
+            (widget.faceFrontPath == null ||
+                widget.faceRightPath == null ||
+                widget.faceLeftPath == null ||
+                widget.poseChallengeCompletedAt == null)) ||
         (widget.role == 'driver' &&
             (_licenseFront == null ||
-                _licenseBack == null ||
-                _vehicleFront == null ||
-                _vehicleRight == null ||
-                _vehicleLeft == null))) {
+                (_licenseBack == null &&
+                    _savedPaths['driver_license_back'] == null) ||
+                (_vehicleFront == null &&
+                    _savedPaths['vehicle_exterior_front'] == null) ||
+                (_vehicleRight == null &&
+                    _savedPaths['vehicle_exterior_right'] == null) ||
+                (_vehicleLeft == null &&
+                    _savedPaths['vehicle_exterior_left'] == null) ||
+                (_vehicleRear == null &&
+                    _savedPaths['vehicle_exterior_rear'] == null) ||
+                _vehicleLicenseFront == null ||
+                _vehicleLicenseBack == null ||
+                _makeController.text.trim().isEmpty ||
+                _modelController.text.trim().isEmpty ||
+                _colorController.text.trim().isEmpty ||
+                _plateController.text.trim().isEmpty ||
+                int.tryParse(_seatsController.text) == null))) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             widget.role == 'driver'
                 ? AppStrings.tr(
                     context,
-                    ar: 'يرجى تصوير البطاقة، ورخصة القيادة، وصور السيارة من الأمام والجانبين بالكاميرا.',
-                    en: 'Please capture ID, driving license, and 3-angle vehicle photos using the camera.',
+                    ar: 'صوّر البطاقة ورخصة القيادة، والسيارة من الأمام والجانبين والخلف بالكاميرا.',
+                    en: 'Capture the ID, driving license, and vehicle front, both sides, and rear.',
                   )
                 : AppStrings.tr(
                     context,
@@ -148,17 +234,45 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
             dateOfBirth: DateTime.parse(widget.dateOfBirth),
             gender: widget.gender,
             city: widget.city,
-            idFront: _idFront!,
-            idBack: _idBack!,
-            faceFront: XFile(widget.faceFrontPath!),
-            faceRight: XFile(widget.faceRightPath!),
-            faceLeft: XFile(widget.faceLeftPath!),
-            poseChallengeCompletedAt: widget.poseChallengeCompletedAt!,
+            idFront: _idFront,
+            idBack: _idBack,
+            faceFront:
+                widget.poseChallengeCompletedAt != null &&
+                    widget.faceFrontPath != null &&
+                    File(widget.faceFrontPath!).existsSync()
+                ? XFile(widget.faceFrontPath!)
+                : null,
+            faceRight:
+                widget.poseChallengeCompletedAt != null &&
+                    widget.faceRightPath != null &&
+                    File(widget.faceRightPath!).existsSync()
+                ? XFile(widget.faceRightPath!)
+                : null,
+            faceLeft:
+                widget.poseChallengeCompletedAt != null &&
+                    widget.faceLeftPath != null &&
+                    File(widget.faceLeftPath!).existsSync()
+                ? XFile(widget.faceLeftPath!)
+                : null,
+            poseChallengeCompletedAt: widget.poseChallengeCompletedAt,
+            existingDocumentPaths: {
+              ..._savedPaths,
+              if (widget.idFrontPath != null)
+                'national_id_front': widget.idFrontPath!,
+            },
             licenseFront: _licenseFront,
             licenseBack: _licenseBack,
             vehicleFront: _vehicleFront,
             vehicleRight: _vehicleRight,
             vehicleLeft: _vehicleLeft,
+            vehicleRear: _vehicleRear,
+            vehicleLicenseFront: _vehicleLicenseFront,
+            vehicleLicenseBack: _vehicleLicenseBack,
+            vehicleMake: _makeController.text.trim(),
+            vehicleModel: _modelController.text.trim(),
+            vehicleColor: _colorController.text.trim(),
+            vehiclePlate: _plateController.text.trim(),
+            vehicleSeats: int.tryParse(_seatsController.text),
           );
       if (mounted) context.go('/verification/submitted');
     } catch (error) {
@@ -184,9 +298,14 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
     required String title,
     required XFile? file,
     required VoidCallback onTap,
+    String? savedKey,
   }) {
     final theme = Theme.of(context);
-    final isUploaded = file != null;
+    final remoteUrl = savedKey == null ? null : _signedUrls[savedKey];
+    final isUploaded =
+        file != null ||
+        remoteUrl != null ||
+        (savedKey != null && _savedPaths.containsKey(savedKey));
 
     return InkWell(
       onTap: onTap,
@@ -211,10 +330,14 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                 child: SizedBox(
                   width: 54,
                   height: 54,
-                  child: Image.file(
-                    File(file.path),
-                    fit: BoxFit.cover,
-                  ),
+                  child: file != null
+                      ? Image.file(File(file.path), fit: BoxFit.cover)
+                      : remoteUrl != null
+                      ? Image.network(remoteUrl, fit: BoxFit.cover)
+                      : const Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF10B981),
+                        ),
                 ),
               )
             else
@@ -246,11 +369,19 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     isUploaded
-                        ? AppStrings.tr(
-                            context,
-                            ar: 'تم التقاط الصورة بنجاح (انقر للإعادة)',
-                            en: 'Photo captured (tap to retake)',
-                          )
+                        ? (savedKey != null &&
+                                  _savedPaths.containsKey(savedKey) &&
+                                  file == null
+                              ? AppStrings.tr(
+                                  context,
+                                  ar: 'محفوظة من التحقق السابق',
+                                  en: 'Reused from previous verification',
+                                )
+                              : AppStrings.tr(
+                                  context,
+                                  ar: 'تم التقاط الصورة بنجاح (انقر للإعادة)',
+                                  en: 'Photo captured (tap to retake)',
+                                ))
                         : AppStrings.tr(
                             context,
                             ar: 'انقر لفتح الكاميرا والتقاط الصورة',
@@ -277,203 +408,386 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
     );
   }
 
+  Widget _vehicleTextField(
+    TextEditingController controller,
+    String label, {
+    bool numeric = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        keyboardType: numeric ? TextInputType.number : TextInputType.text,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  void _handleBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/passenger/profile');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsetsDirectional.only(end: 16),
-            child: LanguageThemeActions(showThemeToggle: false),
+    return PopScope<Object?>(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: _handleBack,
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.role == 'driver'
-                    ? AppStrings.driverDocs(context)
-                    : AppStrings.tr(
-                        context,
-                        ar: 'وثائق الهوية',
-                        en: 'Identity documents',
-                      ),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 26,
+          actions: const [
+            Padding(
+              padding: EdgeInsetsDirectional.only(end: 16),
+              child: LanguageThemeActions(showThemeToggle: false),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.role == 'driver'
+                      ? AppStrings.driverDocs(context)
+                      : AppStrings.tr(
+                          context,
+                          ar: 'وثائق الهوية',
+                          en: 'Identity documents',
+                        ),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 26,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                widget.role == 'driver'
-                    ? AppStrings.driverDocsSub(context)
-                    : AppStrings.tr(
-                        context,
-                        ar: 'التقط صورًا مباشرة وواضحة لوجهي بطاقة الرقم القومي.',
-                        en: 'Capture clear live photos of both sides of your national ID.',
-                      ),
-                style: theme.textTheme.bodyMedium,
-              ),
-
-              const SizedBox(height: 32),
-
-              _buildUploadCard(
-                title: AppStrings.idFront(context),
-                file: _idFront,
-                onTap: () => _capture(
-                  (image) => _idFront = image,
-                  AppStrings.idFront(context),
-                  readId: true,
-                ),
-              ),
-
-              if (_ocrLoading) ...[
-                const SizedBox(height: 12),
-                const LinearProgressIndicator(),
                 const SizedBox(height: 8),
                 Text(
-                  AppStrings.tr(
-                    context,
-                    ar: 'جارٍ قراءة بيانات البطاقة…',
-                    en: 'Reading ID details…',
-                  ),
+                  widget.role == 'driver'
+                      ? AppStrings.driverDocsSub(context)
+                      : AppStrings.tr(
+                          context,
+                          ar: 'التقط صورًا مباشرة وواضحة لوجهي بطاقة الرقم القومي.',
+                          en: 'Capture clear live photos of both sides of your national ID.',
+                        ),
+                  style: theme.textTheme.bodyMedium,
                 ),
-              ],
-              if (_ocrResult != null) ...[
-                const SizedBox(height: 12),
-                _buildOcrResult(context),
-              ],
-              if (_ocrError != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  AppStrings.tr(
-                    context,
-                    ar: 'تعذرت قراءة البطاقة تلقائيًا. تأكد من وضوح الصورة.',
-                    en: 'Could not read ID automatically. Ensure photo is clear.',
-                  ),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 32),
 
-              _buildUploadCard(
-                title: AppStrings.idBack(context),
-                file: _idBack,
-                onTap: () => _capture(
-                  (image) => _idBack = image,
-                  AppStrings.idBack(context),
-                ),
-              ),
+                if (_reuseIdentity) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: .08),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      AppStrings.tr(
+                        context,
+                        ar: 'تم استخدام البطاقة وصور الوجه المحفوظة من التحقق السابق. لن تحتاج لإعادة تصويرها.',
+                        en: 'Your saved ID and face verification are reused. No need to capture them again.',
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  _buildUploadCard(
+                    title: AppStrings.idFront(context),
+                    file: _idFront,
+                    onTap: () => _capture(
+                      (image) {
+                        _idFront = image;
+                        _savedPaths.remove('national_id_front');
+                      },
+                      AppStrings.idFront(context),
+                      readId: true,
+                    ),
+                    savedKey: 'national_id_front',
+                  ),
+                ],
 
-              const SizedBox(height: 16),
-
-              if (widget.role == 'driver') ...[
-                _buildUploadCard(
-                  title: AppStrings.tr(
-                    context,
-                    ar: 'الوجه الأمامي للرخصة',
-                    en: 'License front',
-                  ),
-                  file: _licenseFront,
-                  onTap: () => _capture(
-                    (image) => _licenseFront = image,
-                    AppStrings.drivingLicense(context),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildUploadCard(
-                  title: AppStrings.tr(
-                    context,
-                    ar: 'الوجه الخلفي للرخصة',
-                    en: 'License back',
-                  ),
-                  file: _licenseBack,
-                  onTap: () => _capture(
-                    (image) => _licenseBack = image,
-                    AppStrings.drivingLicense(context),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildUploadCard(
-                  title: AppStrings.tr(
-                    context,
-                    ar: 'صورة السيارة من الأمام',
-                    en: 'Vehicle front',
-                  ),
-                  file: _vehicleFront,
-                  onTap: () => _capture(
-                    (image) => _vehicleFront = image,
+                if (_ocrLoading) ...[
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: 8),
+                  Text(
                     AppStrings.tr(
+                      context,
+                      ar: 'جارٍ قراءة بيانات البطاقة…',
+                      en: 'Reading ID details…',
+                    ),
+                  ),
+                ],
+                if (_ocrResult != null) ...[
+                  const SizedBox(height: 12),
+                  _buildOcrResult(context),
+                ],
+                if (_ocrError != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    AppStrings.tr(
+                      context,
+                      ar: 'تعذرت قراءة البطاقة تلقائيًا. تأكد من وضوح الصورة.',
+                      en: 'Could not read ID automatically. Ensure photo is clear.',
+                    ),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+
+                if (!_reuseIdentity)
+                  _buildUploadCard(
+                    title: AppStrings.idBack(context),
+                    file: _idBack,
+                    onTap: () => _capture((image) {
+                      _idBack = image;
+                      _savedPaths.remove('national_id_back');
+                    }, AppStrings.idBack(context)),
+                    savedKey: 'national_id_back',
+                  ),
+
+                const SizedBox(height: 16),
+
+                if (widget.role == 'driver') ...[
+                  _buildUploadCard(
+                    title: AppStrings.tr(
+                      context,
+                      ar: 'الوجه الأمامي للرخصة',
+                      en: 'License front',
+                    ),
+                    file: _licenseFront,
+                    onTap: () => _capture((image) {
+                      _licenseFront = image;
+                      _savedPaths.remove('driver_license_front');
+                    }, AppStrings.drivingLicense(context)),
+                    savedKey: 'driver_license_front',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildUploadCard(
+                    title: AppStrings.tr(
+                      context,
+                      ar: 'الوجه الخلفي للرخصة',
+                      en: 'License back',
+                    ),
+                    file: _licenseBack,
+                    onTap: () => _capture((image) {
+                      _licenseBack = image;
+                      _savedPaths.remove('driver_license_back');
+                    }, AppStrings.drivingLicense(context)),
+                    savedKey: 'driver_license_back',
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    AppStrings.tr(
+                      context,
+                      ar: 'رخصة السيارة',
+                      en: 'Vehicle registration',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildUploadCard(
+                    title: AppStrings.tr(
+                      context,
+                      ar: 'الوجه الأمامي لرخصة السيارة',
+                      en: 'Vehicle license front',
+                    ),
+                    file: _vehicleLicenseFront,
+                    onTap: () => _capture(
+                      (image) => _vehicleLicenseFront = image,
+                      AppStrings.tr(
+                        context,
+                        ar: 'رخصة السيارة - أمامي',
+                        en: 'Vehicle license front',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildUploadCard(
+                    title: AppStrings.tr(
+                      context,
+                      ar: 'الوجه الخلفي لرخصة السيارة',
+                      en: 'Vehicle license back',
+                    ),
+                    file: _vehicleLicenseBack,
+                    onTap: () => _capture(
+                      (image) => _vehicleLicenseBack = image,
+                      AppStrings.tr(
+                        context,
+                        ar: 'رخصة السيارة - خلفي',
+                        en: 'Vehicle license back',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    AppStrings.tr(
+                      context,
+                      ar: 'بيانات السيارة',
+                      en: 'Vehicle details',
+                    ),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _vehicleTextField(
+                    _makeController,
+                    AppStrings.tr(context, ar: 'الماركة', en: 'Make'),
+                  ),
+                  _vehicleTextField(
+                    _modelController,
+                    AppStrings.tr(context, ar: 'الموديل', en: 'Model'),
+                  ),
+                  _vehicleTextField(
+                    _colorController,
+                    AppStrings.tr(context, ar: 'اللون', en: 'Color'),
+                  ),
+                  _vehicleTextField(
+                    _plateController,
+                    AppStrings.tr(
+                      context,
+                      ar: 'رقم اللوحة',
+                      en: 'Plate number',
+                    ),
+                  ),
+                  _vehicleTextField(
+                    _seatsController,
+                    AppStrings.tr(context, ar: 'عدد المقاعد', en: 'Seats'),
+                    numeric: true,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    AppStrings.tr(
+                      context,
+                      ar: 'صور السيارة (4 جوانب)',
+                      en: 'Vehicle photos (4 sides)',
+                    ),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildUploadCard(
+                    title: AppStrings.tr(
                       context,
                       ar: 'صورة السيارة من الأمام',
                       en: 'Vehicle front',
                     ),
+                    file: _vehicleFront,
+                    savedKey: 'vehicle_exterior_front',
+                    onTap: () => _capture(
+                      (image) {
+                        _vehicleFront = image;
+                        _savedPaths.remove('vehicle_exterior_front');
+                      },
+                      AppStrings.tr(
+                        context,
+                        ar: 'صورة السيارة من الأمام',
+                        en: 'Vehicle front',
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                _buildUploadCard(
-                  title: AppStrings.tr(
-                    context,
-                    ar: 'الجانب الأيمن للسيارة',
-                    en: 'Vehicle right side',
-                  ),
-                  file: _vehicleRight,
-                  onTap: () => _capture(
-                    (image) => _vehicleRight = image,
-                    AppStrings.tr(
+                  const SizedBox(height: 16),
+                  _buildUploadCard(
+                    title: AppStrings.tr(
                       context,
                       ar: 'الجانب الأيمن للسيارة',
                       en: 'Vehicle right side',
                     ),
+                    file: _vehicleRight,
+                    savedKey: 'vehicle_exterior_right',
+                    onTap: () => _capture(
+                      (image) {
+                        _vehicleRight = image;
+                        _savedPaths.remove('vehicle_exterior_right');
+                      },
+                      AppStrings.tr(
+                        context,
+                        ar: 'الجانب الأيمن للسيارة',
+                        en: 'Vehicle right side',
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                _buildUploadCard(
-                  title: AppStrings.tr(
-                    context,
-                    ar: 'الجانب الأيسر للسيارة',
-                    en: 'Vehicle left side',
-                  ),
-                  file: _vehicleLeft,
-                  onTap: () => _capture(
-                    (image) => _vehicleLeft = image,
-                    AppStrings.tr(
+                  const SizedBox(height: 16),
+                  _buildUploadCard(
+                    title: AppStrings.tr(
                       context,
                       ar: 'الجانب الأيسر للسيارة',
                       en: 'Vehicle left side',
                     ),
+                    file: _vehicleLeft,
+                    savedKey: 'vehicle_exterior_left',
+                    onTap: () => _capture(
+                      (image) {
+                        _vehicleLeft = image;
+                        _savedPaths.remove('vehicle_exterior_left');
+                      },
+                      AppStrings.tr(
+                        context,
+                        ar: 'الجانب الأيسر للسيارة',
+                        en: 'Vehicle left side',
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 16),
+                  _buildUploadCard(
+                    title: AppStrings.tr(
+                      context,
+                      ar: 'الجانب الخلفي للسيارة',
+                      en: 'Vehicle rear',
+                    ),
+                    file: _vehicleRear,
+                    savedKey: 'vehicle_exterior_rear',
+                    onTap: () => _capture(
+                      (image) {
+                        _vehicleRear = image;
+                        _savedPaths.remove('vehicle_exterior_rear');
+                      },
+                      AppStrings.tr(
+                        context,
+                        ar: 'الجانب الخلفي للسيارة',
+                        en: 'Vehicle rear',
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 48),
+
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(AppStrings.submitDocs(context)),
                 ),
+                const SizedBox(height: 20),
               ],
-
-              const SizedBox(height: 48),
-
-              ElevatedButton(
-                onPressed: _isLoading ? null : _submit,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(AppStrings.submitDocs(context)),
-              ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
         ),
       ),
@@ -490,9 +804,7 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: matches
-              ? const Color(0xFF10B981)
-              : const Color(0xFFF59E0B),
+          color: matches ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
           width: 1.5,
         ),
       ),

@@ -387,6 +387,14 @@ class _IdentityVerificationScreenState
     );
   }
 
+  void _handleBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/passenger/profile');
+    }
+  }
+
   String _challengeInstruction(BuildContext context) {
     switch (_challengeStage) {
       case 0:
@@ -426,294 +434,323 @@ class _IdentityVerificationScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsetsDirectional.only(end: 16),
-            child: LanguageThemeActions(showThemeToggle: false),
+    return PopScope<Object?>(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: _handleBack,
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  AppStrings.verifyIdentity(context),
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 26,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  AppStrings.selfieInstruction(context),
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ),
-
-              const Spacer(),
-
-              // إطار كاميرا السيلفي — مطابق لتصميم الـ Figma
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 250,
-                    height: 310,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: _photoTaken
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFF59E0B),
-                        width: 2.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (_photoTaken
-                                  ? const Color(0xFF10B981)
-                                  : const Color(0xFFF59E0B))
-                              .withValues(alpha: 0.15),
-                          blurRadius: 30,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: _photoTaken && _faceFront != null
-                        ? Image.file(File(_faceFront!.path), fit: BoxFit.cover)
-                        : _cameraController?.value.isInitialized == true
-                        ? CameraPreview(_cameraController!)
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _photoTaken
-                                    ? Icons.check_circle_rounded
-                                    : Icons.face_retouching_natural_rounded,
-                                size: 110,
-                                color: _photoTaken
-                                    ? const Color(0xFF10B981)
-                                    : const Color(0xFFF59E0B).withValues(alpha: 0.6),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _photoTaken
-                                    ? AppStrings.tr(
-                                        context,
-                                        ar: 'تم التقاط الصورة بنجاح',
-                                        en: 'Selfie captured',
-                                      )
-                                    : AppStrings.tr(
-                                        context,
-                                        ar: 'ضع وجهك هنا',
-                                        en: 'Fit face here',
-                                      ),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: _photoTaken
-                                      ? const Color(0xFF10B981)
-                                      : theme.hintColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-
-                  // زوايا التأطير (Corner Guides)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Color(0xFFF59E0B), width: 3),
-                          left: BorderSide(color: Color(0xFFF59E0B), width: 3),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Color(0xFFF59E0B), width: 3),
-                          right: BorderSide(color: Color(0xFFF59E0B), width: 3),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    left: 10,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Color(0xFFF59E0B), width: 3),
-                          left: BorderSide(color: Color(0xFFF59E0B), width: 3),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    right: 10,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Color(0xFFF59E0B), width: 3),
-                          right: BorderSide(color: Color(0xFFF59E0B), width: 3),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const Spacer(),
-
-              // أزرار التحكم
-              if (_cameraError != null) ...[
-                Text(
-                  AppStrings.tr(
-                    context,
-                    ar: 'تعذر تشغيل كاميرا الفحص المباشر.',
-                    en: 'Could not start live face camera.',
-                  ),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: () => _pickSelfieViaPicker(ImageSource.camera),
-                  icon: const Icon(Icons.camera_alt_rounded),
-                  label: Text(
-                    AppStrings.tr(
-                      context,
-                      ar: 'التقاط صورة سيلفي عبر الكاميرا',
-                      en: 'Take selfie via Camera',
+          actions: const [
+            Padding(
+              padding: EdgeInsetsDirectional.only(end: 16),
+              child: LanguageThemeActions(showThemeToggle: false),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    AppStrings.verifyIdentity(context),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: _startCamera,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: Text(
-                    AppStrings.tr(context, ar: 'إعادة المحاولة', en: 'Retry'),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    AppStrings.selfieInstruction(context),
+                    style: theme.textTheme.bodyMedium,
                   ),
                 ),
-              ] else if (!_photoTaken) ...[
-                Column(
+
+                const Spacer(),
+
+                // إطار كاميرا السيلفي — مطابق لتصميم الـ Figma
+                Stack(
+                  alignment: Alignment.center,
                   children: [
-                    LinearProgressIndicator(
-                      value: _challengeStage >= 4
-                          ? 1
-                          : _challengeStage >= 2
-                          ? 0.5
-                          : 0,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _cameraLoading
-                          ? AppStrings.tr(
-                              context,
-                              ar: 'جارٍ تشغيل الكاميرا…',
-                              en: 'Starting camera…',
+                    Container(
+                      width: 250,
+                      height: 310,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: _photoTaken
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFF59E0B),
+                          width: 2.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                (_photoTaken
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFFF59E0B))
+                                    .withValues(alpha: 0.15),
+                            blurRadius: 30,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: _photoTaken && _faceFront != null
+                          ? Image.file(
+                              File(_faceFront!.path),
+                              fit: BoxFit.cover,
                             )
-                          : _challengeInstruction(context),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                          : _cameraController?.value.isInitialized == true
+                          ? CameraPreview(_cameraController!)
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _photoTaken
+                                      ? Icons.check_circle_rounded
+                                      : Icons.face_retouching_natural_rounded,
+                                  size: 110,
+                                  color: _photoTaken
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFF59E0B)
+                                            .withValues(alpha: 0.6),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _photoTaken
+                                      ? AppStrings.tr(
+                                          context,
+                                          ar: 'تم التقاط الصورة بنجاح',
+                                          en: 'Selfie captured',
+                                        )
+                                      : AppStrings.tr(
+                                          context,
+                                          ar: 'ضع وجهك هنا',
+                                          en: 'Fit face here',
+                                        ),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _photoTaken
+                                        ? const Color(0xFF10B981)
+                                        : theme.hintColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+
+                    // زوايا التأطير (Corner Guides)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Color(0xFFF59E0B), width: 3),
+                            left: BorderSide(
+                              color: Color(0xFFF59E0B),
+                              width: 3,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    if (_faceFeedback != null) ...[
-                      const SizedBox(height: 6),
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Color(0xFFF59E0B), width: 3),
+                            right: BorderSide(
+                              color: Color(0xFFF59E0B),
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 10,
+                      left: 10,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Color(0xFFF59E0B),
+                              width: 3,
+                            ),
+                            left: BorderSide(
+                              color: Color(0xFFF59E0B),
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 10,
+                      right: 10,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Color(0xFFF59E0B),
+                              width: 3,
+                            ),
+                            right: BorderSide(
+                              color: Color(0xFFF59E0B),
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const Spacer(),
+
+                // أزرار التحكم
+                if (_cameraError != null) ...[
+                  Text(
+                    AppStrings.tr(
+                      context,
+                      ar: 'تعذر تشغيل كاميرا الفحص المباشر.',
+                      en: 'Could not start live face camera.',
+                    ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _pickSelfieViaPicker(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt_rounded),
+                    label: Text(
+                      AppStrings.tr(
+                        context,
+                        ar: 'التقاط صورة سيلفي عبر الكاميرا',
+                        en: 'Take selfie via Camera',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: _startCamera,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(
+                      AppStrings.tr(context, ar: 'إعادة المحاولة', en: 'Retry'),
+                    ),
+                  ),
+                ] else if (!_photoTaken) ...[
+                  Column(
+                    children: [
+                      LinearProgressIndicator(
+                        value: _challengeStage >= 4
+                            ? 1
+                            : _challengeStage >= 2
+                            ? 0.5
+                            : 0,
+                      ),
+                      const SizedBox(height: 12),
                       Text(
-                        _faceFeedbackText(context)!,
+                        _cameraLoading
+                            ? AppStrings.tr(
+                                context,
+                                ar: 'جارٍ تشغيل الكاميرا…',
+                                en: 'Starting camera…',
+                              )
+                            : _challengeInstruction(context),
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: _faceFeedback == 'face_detected'
-                              ? const Color(0xFF10B981)
-                              : theme.colorScheme.error,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (_faceFeedback != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          _faceFeedbackText(context)!,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: _faceFeedback == 'face_detected'
+                                ? const Color(0xFF10B981)
+                                : theme.colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      // Manual Capture button
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF59E0B),
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: _manualCapture,
+                        icon: const Icon(Icons.camera_alt_rounded),
+                        label: Text(
+                          AppStrings.tr(
+                            context,
+                            ar: 'التقاط الصورة الآن',
+                            en: 'Snap photo now',
+                          ),
                         ),
                       ),
                     ],
-                    const SizedBox(height: 16),
-                    // Manual Capture button
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF59E0B),
-                        foregroundColor: Colors.white,
+                  ),
+                ] else ...[
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _angleThumbnail(context, _faceFront, 'أمام', 'Front'),
+                          const SizedBox(width: 8),
+                          _angleThumbnail(context, _faceRight, 'يمين', 'Right'),
+                          const SizedBox(width: 8),
+                          _angleThumbnail(context, _faceLeft, 'شمال', 'Left'),
+                        ],
                       ),
-                      onPressed: _manualCapture,
-                      icon: const Icon(Icons.camera_alt_rounded),
-                      label: Text(
-                        AppStrings.tr(
-                          context,
-                          ar: 'التقاط الصورة الآن',
-                          en: 'Snap photo now',
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _onContinue,
+                        child: Text(AppStrings.continueBtn(context)),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _restartChallenge,
+                        child: Text(
+                          AppStrings.retake(context),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ] else ...[
-                Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _angleThumbnail(context, _faceFront, 'أمام', 'Front'),
-                        const SizedBox(width: 8),
-                        _angleThumbnail(context, _faceRight, 'يمين', 'Right'),
-                        const SizedBox(width: 8),
-                        _angleThumbnail(context, _faceLeft, 'شمال', 'Left'),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _onContinue,
-                      child: Text(AppStrings.continueBtn(context)),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: _restartChallenge,
-                      child: Text(
-                        AppStrings.retake(context),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
 
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),

@@ -134,7 +134,7 @@ class AuthService {
 
     return const AccountDestination(
       '/verification/personal-details',
-      extra: {'role': 'driver'},
+      extra: {'role': 'driver', 'driverOnboarding': true},
     );
   }
 }

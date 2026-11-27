@@ -114,6 +114,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           final data = state.extra as Map<String, dynamic>? ?? const {};
           return PersonalDetailsScreen(
             role: data['role'] as String? ?? 'passenger',
+            editProfile: data['editProfile'] as bool? ?? false,
+            driverOnboarding: data['driverOnboarding'] as bool? ?? false,
           );
         },
       ),
@@ -260,10 +262,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Chat
-      GoRoute(
-        path: '/chat/inbox',
-        builder: (_, _) => const ChatInboxScreen(),
-      ),
+      GoRoute(path: '/chat/inbox', builder: (_, _) => const ChatInboxScreen()),
       GoRoute(
         path: '/chat/:bookingId',
         builder: (_, state) => ChatScreen(

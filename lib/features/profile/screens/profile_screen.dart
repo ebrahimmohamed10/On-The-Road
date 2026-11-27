@@ -267,12 +267,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isArabic ? 'مركز الدعم والمساعدة' : 'Help & Support Center',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        isArabic
+                            ? 'مركز الدعم والمساعدة'
+                            : 'Help & Support Center',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                       Text(
-                        isArabic ? 'فريق أون ذا رود في خدمتك على مدار الساعة' : 'On The Road team is at your service 24/7',
-                        style: TextStyle(fontSize: 12, color: Theme.of(ctx).hintColor),
+                        isArabic
+                            ? 'فريق أون ذا رود في خدمتك على مدار الساعة'
+                            : 'On The Road team is at your service 24/7',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(ctx).hintColor,
+                        ),
                       ),
                     ],
                   ),
@@ -287,9 +297,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     color: const Color(0xFF10B981).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF10B981)),
+                  child: const Icon(
+                    Icons.phone_in_talk_rounded,
+                    color: Color(0xFF10B981),
+                  ),
                 ),
-                title: Text(isArabic ? 'خدمة العملاء الهاتفية' : 'Customer Care Hotline'),
+                title: Text(
+                  isArabic ? 'خدمة العملاء الهاتفية' : 'Customer Care Hotline',
+                ),
                 subtitle: const Text('19842 (24/7)'),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 onTap: () {
@@ -297,7 +312,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        isArabic ? 'جاري الاتصال بخدمة العملاء 19842...' : 'Calling hotline 19842...',
+                        isArabic
+                            ? 'جاري الاتصال بخدمة العملاء 19842...'
+                            : 'Calling hotline 19842...',
                       ),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -311,9 +328,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     color: const Color(0xFF25D366).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366)),
+                  child: const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: Color(0xFF25D366),
+                  ),
                 ),
-                title: Text(isArabic ? 'واتساب الدعم الفني' : 'WhatsApp Support'),
+                title: Text(
+                  isArabic ? 'واتساب الدعم الفني' : 'WhatsApp Support',
+                ),
                 subtitle: const Text('+20 100 000 0000'),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 onTap: () {
@@ -321,7 +343,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        isArabic ? 'تم فتح محادثة الدعم عبر واتساب' : 'Opening WhatsApp support...',
+                        isArabic
+                            ? 'تم فتح محادثة الدعم عبر واتساب'
+                            : 'Opening WhatsApp support...',
                       ),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -335,7 +359,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     color: const Color(0xFF0F172A).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.email_outlined, color: Color(0xFF0F172A)),
+                  child: const Icon(
+                    Icons.email_outlined,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
                 title: Text(isArabic ? 'البريد الإلكتروني' : 'Support Email'),
                 subtitle: const Text('support@ontheroad.eg'),
@@ -345,7 +372,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        isArabic ? 'يمكنك مراسلتنا على: support@ontheroad.eg' : 'Email us at: support@ontheroad.eg',
+                        isArabic
+                            ? 'يمكنك مراسلتنا على: support@ontheroad.eg'
+                            : 'Email us at: support@ontheroad.eg',
                       ),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -425,38 +454,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: theme.dividerColor.withValues(alpha: 0.12)),
       ),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: (iconColor ?? const Color(0xFFF59E0B)).withValues(
-              alpha: 0.1,
+      child: Material(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          onTap: onTap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: (iconColor ?? const Color(0xFFF59E0B)).withValues(
+                alpha: 0.1,
+              ),
+              borderRadius: BorderRadius.circular(10),
             ),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            icon,
-            color: iconColor ?? const Color(0xFFF59E0B),
-            size: 20,
-          ),
-        ),
-        title: Text(
-          title,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: textColor,
-          ),
-        ),
-        trailing:
-            trailing ??
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: theme.hintColor.withValues(alpha: 0.5),
+            child: Icon(
+              icon,
+              color: iconColor ?? const Color(0xFFF59E0B),
+              size: 20,
             ),
+          ),
+          title: Text(
+            title,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+          trailing:
+              trailing ??
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: theme.hintColor.withValues(alpha: 0.5),
+              ),
+        ),
       ),
     );
   }
@@ -495,10 +531,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(
         title: Text(AppStrings.profile(context)),
         automaticallyImplyLeading: false,
-        actions: const [
-          NotificationBellButton(),
-          SizedBox(width: 8),
-        ],
+        actions: const [NotificationBellButton(), SizedBox(width: 8)],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -655,7 +688,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       title: AppStrings.vehicleInfo(context),
                       onTap: () => context.push(
                         '/verification/personal-details',
-                        extra: {'role': 'driver'},
+                        extra: {'role': 'driver', 'driverOnboarding': true},
                       ),
                     ),
                   ] else ...[
@@ -669,7 +702,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       iconColor: const Color(0xFF10B981),
                       onTap: () => context.push(
                         '/verification/personal-details',
-                        extra: {'role': 'driver'},
+                        extra: {'role': 'driver', 'driverOnboarding': true},
                       ),
                     ),
                   ],
@@ -679,7 +712,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     title: AppStrings.personalDetails(context),
                     onTap: () => context.push(
                       '/verification/personal-details',
-                      extra: {'role': role},
+                      extra: {'role': role, 'editProfile': true},
                     ),
                   ),
 

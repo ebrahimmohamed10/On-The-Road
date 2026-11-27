@@ -63,7 +63,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       if (widget.registration) {
         context.go(
           '/verification/personal-details',
-          extra: {'role': widget.role ?? 'passenger'},
+          extra: {
+            'role': widget.role ?? 'passenger',
+            if (widget.role == 'driver') 'driverOnboarding': true,
+          },
         );
       } else {
         context.go(destination.location, extra: destination.extra);
