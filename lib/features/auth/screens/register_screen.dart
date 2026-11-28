@@ -55,7 +55,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     setState(() => _isLoading = true);
     try {
       final role = _selectedRoleIndex == 1 ? 'driver' : 'passenger';
-      await ref
+      final signupAttemptId = await ref
           .read(authServiceProvider)
           .requestPhoneOtp(
             phone: phone,
@@ -71,6 +71,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           'registration': true,
           'name': name,
           'role': role,
+          'signupAttemptId': signupAttemptId,
         },
       );
     } catch (error) {

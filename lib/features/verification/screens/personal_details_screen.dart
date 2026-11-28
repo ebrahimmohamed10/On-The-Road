@@ -63,6 +63,7 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
       return;
     }
     try {
+      await ref.read(verificationServiceProvider).cleanupSupersededDocuments();
       final details = await client
           .from('user_private_details')
           .select('national_id,date_of_birth,city,gender')
@@ -90,44 +91,67 @@ class _PersonalDetailsScreenState extends ConsumerState<PersonalDetailsScreen> {
         _hasSavedDetails = true;
         _isEditing = false;
 
-        final request = await client
-            .from('verification_requests')
-            .select('id')
+        final documents = await client
+            .from('verification_documents')
+            .select('document_type,storage_path,status,uploaded_at')
             .eq('user_id', user.id)
+            .isFilter('superseded_at', null)
+            .inFilter('status', ['submitted', 'accepted'])
+            .order('uploaded_at', ascending: false);
+        final sortedDocuments = List<Map<String, dynamic>>.from(documents)
+          ..sort((a, b) {
+            final aPending = a['status'] == 'submitted' ? 0 : 1;
+            final bPending = b['status'] == 'submitted' ? 0 : 1;
+            return aPending.compareTo(bPending);
+          });
+        for (final document in sortedDocuments) {
+          final type = document['document_type'] as String?;
+          final path = document['storage_path'] as String?;
+          if (type != null && path != null && path.isNotEmpty) {
+            _savedDocumentPaths.putIfAbsent(type, () => path);
+          }
+        }
+
+        final vehicle = await client
+            .from('vehicles')
+            .select('id')
+            .eq('owner_id', user.id)
             .order('created_at', ascending: false)
             .limit(1)
             .maybeSingle();
-        if (request != null) {
-          final documents = await client
-              .from('verification_documents')
-              .select('document_type,storage_path')
-              .eq('verification_request_id', request['id'])
-              .inFilter('document_type', [
-                'national_id_front',
-                'national_id_back',
-                'driver_license_front',
-                'driver_license_back',
-                'face_scan',
-                'face_scan_front',
-                'face_scan_right',
-                'face_scan_left',
-                'vehicle_exterior_front',
-                'vehicle_exterior_right',
-                'vehicle_exterior_left',
-                'vehicle_exterior_rear',
-              ]);
-          for (final document in documents) {
+        if (vehicle != null) {
+          final vehicleDocuments = await client
+              .from('vehicle_documents')
+              .select('document_type,storage_path,status,uploaded_at')
+              .eq('user_id', user.id)
+              .eq('vehicle_id', vehicle['id'])
+              .isFilter('superseded_at', null)
+              .inFilter('status', ['submitted', 'accepted'])
+              .order('uploaded_at', ascending: false);
+          final sortedVehicleDocuments =
+              List<Map<String, dynamic>>.from(vehicleDocuments)..sort((a, b) {
+                final aPending = a['status'] == 'submitted' ? 0 : 1;
+                final bPending = b['status'] == 'submitted' ? 0 : 1;
+                return aPending.compareTo(bPending);
+              });
+          for (final document in sortedVehicleDocuments) {
             final type = document['document_type'] as String?;
             final path = document['storage_path'] as String?;
             if (type != null && path != null && path.isNotEmpty) {
-              _savedDocumentPaths[type] = path;
-              try {
-                _savedDocumentUrls[type] = await client.storage
-                    .from('identity-documents')
-                    .createSignedUrl(path, 3600);
-              } catch (_) {}
+              _savedDocumentPaths.putIfAbsent(type, () => path);
             }
           }
+        }
+
+        for (final entry in _savedDocumentPaths.entries) {
+          try {
+            final bucket = entry.key.startsWith('vehicle_license_')
+                ? 'vehicle-documents'
+                : 'identity-documents';
+            _savedDocumentUrls[entry.key] = await client.storage
+                .from(bucket)
+                .createSignedUrl(entry.value, 3600);
+          } catch (_) {}
         }
       }
     } catch (_) {

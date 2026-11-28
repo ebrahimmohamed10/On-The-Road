@@ -80,8 +80,9 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
       _idFront = XFile(resolvedIdFront);
     }
     final idBackPath = docs['national_id_back'];
-    if (idBackPath != null && File(idBackPath).existsSync())
+    if (idBackPath != null && File(idBackPath).existsSync()) {
       _idBack = XFile(idBackPath);
+    }
     final licenseFrontPath = docs['driver_license_front'];
     if (licenseFrontPath != null && File(licenseFrontPath).existsSync()) {
       _licenseFront = XFile(licenseFrontPath);
@@ -97,12 +98,15 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
       _savedPaths['face_scan_right'] = widget.faceRightPath!;
       _savedPaths['face_scan_left'] = widget.faceLeftPath!;
     } else {
-      if (widget.faceFrontPath != null)
+      if (widget.faceFrontPath != null) {
         _savedPaths['face_scan_front'] = widget.faceFrontPath!;
-      if (widget.faceRightPath != null)
+      }
+      if (widget.faceRightPath != null) {
         _savedPaths['face_scan_right'] = widget.faceRightPath!;
-      if (widget.faceLeftPath != null)
+      }
+      if (widget.faceLeftPath != null) {
         _savedPaths['face_scan_left'] = widget.faceLeftPath!;
+      }
     }
     _hasSavedFace =
         _savedPaths['face_scan_front'] != null &&
@@ -198,8 +202,10 @@ class _DriverDocumentsScreenState extends ConsumerState<DriverDocumentsScreen> {
                     _savedPaths['vehicle_exterior_left'] == null) ||
                 (_vehicleRear == null &&
                     _savedPaths['vehicle_exterior_rear'] == null) ||
-                _vehicleLicenseFront == null ||
-                _vehicleLicenseBack == null ||
+                (_vehicleLicenseFront == null &&
+                    _savedPaths['vehicle_license_front'] == null) ||
+                (_vehicleLicenseBack == null &&
+                    _savedPaths['vehicle_license_back'] == null) ||
                 _makeController.text.trim().isEmpty ||
                 _modelController.text.trim().isEmpty ||
                 _colorController.text.trim().isEmpty ||

@@ -12,6 +12,7 @@ class OtpScreen extends ConsumerStatefulWidget {
   final bool registration;
   final String? name;
   final String? role;
+  final String? signupAttemptId;
 
   const OtpScreen({
     super.key,
@@ -19,6 +20,7 @@ class OtpScreen extends ConsumerStatefulWidget {
     this.registration = false,
     this.name,
     this.role,
+    this.signupAttemptId,
   });
 
   @override
@@ -58,18 +60,20 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             token: code,
             registration: widget.registration,
             requestedRole: widget.role,
+            signupAttemptId: widget.signupAttemptId,
           );
       if (!mounted) return;
-      if (widget.registration) {
-        context.go(
-          '/verification/personal-details',
-          extra: {
-            'role': widget.role ?? 'passenger',
-            if (widget.role == 'driver') 'driverOnboarding': true,
-          },
-        );
-      } else {
-        context.go(destination.location, extra: destination.extra);
+      final messenger = ScaffoldMessenger.of(context);
+      final existingAccountMessage = destination.existingAccount
+          ? AppStrings.tr(
+              context,
+              ar: 'الرقم مسجل بالفعل. فتحنا حسابك الموجود بدون إنشاء حساب جديد.',
+              en: 'This number is already registered. We opened your existing account.',
+            )
+          : null;
+      context.go(destination.location, extra: destination.extra);
+      if (existingAccountMessage != null) {
+        messenger.showSnackBar(SnackBar(content: Text(existingAccountMessage)));
       }
     } catch (_) {
       if (mounted) {
@@ -101,6 +105,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             createUser: widget.registration,
             fullName: widget.name,
             role: widget.role,
+            signupAttemptId: widget.signupAttemptId,
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

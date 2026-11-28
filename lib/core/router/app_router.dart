@@ -103,6 +103,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             registration: data['registration'] as bool? ?? false,
             name: data['name'] as String?,
             role: data['role'] as String?,
+            signupAttemptId: data['signupAttemptId'] as String?,
           );
         },
       ),

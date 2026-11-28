@@ -19,13 +19,6 @@ class VerificationService {
     return _uploadBytes(userId, kind, bytes, bucket);
   }
 
-  Future<String> _copyStored(String userId, String kind, String oldPath) async {
-    final bytes = await _client.storage
-        .from('identity-documents')
-        .download(oldPath);
-    return _uploadBytes(userId, kind, bytes, 'identity-documents');
-  }
-
   Future<String> _uploadBytes(
     String userId,
     String kind,
@@ -60,9 +53,9 @@ class VerificationService {
   }) async {
     if (file != null) return _upload(userId, kind, file);
     if (existingPath != null && existingPath.isNotEmpty) {
-      // verification_documents.storage_path is unique, so each new request
-      // gets a fresh object while reusing the already verified photo.
-      return _copyStored(userId, kind, existingPath);
+      // Reuse the same Storage object for unchanged documents. The database
+      // records only changed images as new review versions.
+      return existingPath;
     }
     throw ArgumentError('الصورة المطلوبة غير موجودة: $kind');
   }
@@ -151,8 +144,9 @@ class VerificationService {
     bool resubmittingExistingProfile = false,
   }) async {
     final user = _client.auth.currentUser;
-    if (user == null)
+    if (user == null) {
       throw StateError('يجب تسجيل الدخول أولًا لتقديم طلب التحقق.');
+    }
     if (role != 'passenger' && role != 'driver') {
       throw ArgumentError.value(role, 'role', 'نوع الحساب غير مدعوم.');
     }
@@ -303,6 +297,73 @@ class VerificationService {
       await _client.from('verification_requests').insert(payload);
     } on PostgrestException catch (e) {
       throw StateError('خطأ في قاعدة البيانات: ${e.message}');
+    }
+    await cleanupSupersededDocuments();
+  }
+
+  /// Removes retired document objects only after the DB has marked them as
+  /// superseded. Accepted replacements are retired by the review RPC and are
+  /// cleaned up the next time the user's app opens this flow/profile.
+  Future<void> cleanupSupersededDocuments() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return;
+
+    await _removeSupersededRows(
+      table: 'verification_documents',
+      userId: user.id,
+      bucketForType: (type) => 'identity-documents',
+    );
+    await _removeSupersededRows(
+      table: 'vehicle_documents',
+      userId: user.id,
+      bucketForType: (_) => 'vehicle-documents',
+    );
+  }
+
+  Future<void> _removeSupersededRows({
+    required String table,
+    required String userId,
+    required String Function(String type) bucketForType,
+  }) async {
+    try {
+      final rows = await _client
+          .from(table)
+          .select('id,document_type,storage_path')
+          .eq('user_id', userId)
+          .not('superseded_at', 'is', null)
+          .isFilter('storage_deleted_at', null);
+      final grouped = <String, List<Map<String, dynamic>>>{};
+      for (final row in rows) {
+        final type = row['document_type'] as String?;
+        final path = row['storage_path'] as String?;
+        if (type == null || path == null || path.isEmpty) continue;
+        grouped.putIfAbsent(bucketForType(type), () => []).add(row);
+      }
+      for (final entry in grouped.entries) {
+        for (var offset = 0; offset < entry.value.length; offset += 1000) {
+          final batch = entry.value.skip(offset).take(1000).toList();
+          try {
+            await _client.storage
+                .from(entry.key)
+                .remove(
+                  batch.map((row) => row['storage_path'] as String).toList(),
+                );
+            await _client
+                .from(table)
+                .update({
+                  'storage_deleted_at': DateTime.now()
+                      .toUtc()
+                      .toIso8601String(),
+                })
+                .eq('user_id', userId)
+                .inFilter('id', batch.map((row) => row['id']).toList());
+          } catch (_) {
+            // A failed Storage delete remains eligible for cleanup next time.
+          }
+        }
+      }
+    } catch (_) {
+      // Cleanup is best-effort and must never block verification submission.
     }
   }
 }

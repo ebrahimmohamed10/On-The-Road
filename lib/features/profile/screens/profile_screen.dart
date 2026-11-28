@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/locale_provider.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../verification/services/verification_service.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/notification_bell_button.dart';
 import 'avatar_crop_screen.dart';
@@ -47,6 +48,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     final client = Supabase.instance.client;
+    await ref.read(verificationServiceProvider).cleanupSupersededDocuments();
     final user = client.auth.currentUser;
     if (user == null) {
       if (mounted) setState(() => _loading = false);
